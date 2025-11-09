@@ -10,7 +10,7 @@ servers:
     description: Default API Endpoint (Local or deployed)
   - url: http://localhost:8080/api/v1
     description: Local development server
-
+    
 paths:
   /session:
     post:
@@ -45,19 +45,165 @@ paths:
                 type: object
                 properties:
                   identifier:
-                  # change here if you decide to use an integer
-                  # or any other type of identifier
                     type: string
                     example: "abcdef012345"
         "400":
           description: The length of the name is out of range
-
+  
+  /user/name:
+    put:
+      tags: ["user"]
+      summary: Update the user's name
+      description: |
+        If the user is authenticated and the name is not duplicated with others,
+        the display name will be changed
+      operationId: setMyUserName
+      requestBody:
+        description: User name
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                newName:
+                  type: string
+                  example: Maria
+                  pattern: '^.*?$'
+                  minLength: 3
+                  maxLength: 16
+        required: true
+      responses:
+        "200":
+          description: User name updated successfully
+        "400":
+          description: The length of the name is out of range
+        "401":
+          description: The user is unauthorized
+        "409":
+          description: The name is already exist
+          
+  /conversations:
+    get:
+      tags: ["conversations"]
+      summary: Retrive conversations
+      description: List all the conversations of the users, sorted reverse chronologically.
+      operationId: getMyConversations
+      responses:
+        "200":
+          description: Successfully retrieved conversation list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/conversation-info"
+        "401":
+          description: The user is unauthorized
+        
+  /conversations/{conversationId}:
+    parameters:
+      - name: conversationId
+        in: path
+        required: true
+        description: this is the conversation id
+        schema:
+          type: integer
+          description: an incremental number e.g., /1234 for each conversation 
+          
+    get:
+      tags: ["conversations"]
+      summary: Get a specific conversation
+      operationId: getConversation
+      responses:
+        "200":
+          description: Successfully retrieved the conversation
+          content: 
+            application/json:
+              schema:
+                type: object
+                items:
+                  $ref: "#/components/schemas/message"
+        "404":
+          description:  conversation not found
+                
 components:
   securitySchemes:
     bearerAuth: 
       type: http
       scheme: bearer
       bearerFormat: JWT 
-
+      
+  schemas:
+    conversation-info:
+      type: object
+      properties:
+        conversationId:
+          type: integer
+        name:
+          type: string
+        photoURL:
+          type: string
+          description: URL to the user/group photo
+        isGroup: 
+          type: boolean
+        latestMessageTime:
+          type: string
+          format: date-time
+        latestMessagePreview:
+          type: string
+        unreadCount:
+          type: integer
+      required:
+        - id
+        - name
+        - isGroup
+        
+    reaction:
+      type: object
+      properties:
+        reactorName: 
+          type: string
+        icon:
+          type: string
+    
+    message:
+      type: object
+      properties:
+        conversationId:
+          type: integer
+        senderName:
+          type: string
+        timeStamp:
+          type: string
+          format: date-time
+        content:
+          type: string
+        contentType:
+          type: string
+          enum:
+            - text
+            - photo
+        replyToId:
+          type: integer
+          nullable: true
+        status:
+          type: integer
+          description: "0: Sent, 1: Received by all, 2: Read by all."
+          enum:
+            - 0
+            - 1
+            - 2
+        reactions:
+          type: array
+          items: 
+            $ref: '#/components/schemas/reaction'
+      required:
+        - conversationId
+        - senderName
+        - timeStamp
+        - content
+        - contentType
+        - status
+        
 security:
   - bearerAuth: []
