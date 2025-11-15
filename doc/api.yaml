@@ -45,6 +45,8 @@ paths:
                 type: object
                 properties:
                   identifier:
+                  # change here if you decide to use an integer
+                  # or any other type of identifier
                     type: string
                     example: "abcdef012345"
         "400":
@@ -125,6 +127,91 @@ paths:
                   $ref: "#/components/schemas/message"
         "404":
           description:  conversation not found
+          
+  /messages:
+    put:
+      tags: ["message"]
+      summary: Send message
+      description: |
+        Send a new message(text or photo) to the conversation 
+        or reply an old message
+      operationId: sendMessage
+      requestBody:
+        description: message details
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                conversationId:
+                  type: integer
+                content:
+                  type: string
+                contentType:
+                  type: string
+                  enum:
+                    - text
+                    - photo
+                replytoId:
+                  type: integer
+                  nullable: true
+      responses:
+        "201":
+          description: Message sent successfully
+          
+  /messages/{messageId}:
+    parameters:
+      - name: messageId
+        in: path
+        required: true
+        description: this is the message id
+        schema:
+          type: integer
+          description: an incremental number 
+          
+    delete:
+      tags: ["message"]
+      summary: Delete message
+      description: Only the sender can choose to delete the message he sent
+      operationId: deleteMessage
+      responses:
+        "200":
+          description: The message was successfullt deleted
+        "403":
+          description: No permission to delete this message
+        
+  /messages/{messageId}/forward:
+    parameters:
+      - name: messageId
+        in: path
+        required: true
+        description: this is the message id
+        schema:
+          type: integer
+          description: an incremental number 
+          
+    post:
+      tags: ["message"]
+      summary: Forward message
+      description: Forward a message to one or more other conversations
+      operationId: forwardMessage
+      requestBody:
+        description: target conversation details
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                targetConversationIds:
+                  type: array
+                  items:
+                    type: integer
+        required: true
+      responses:
+        "200":
+          description: Message forwarding successfully
+        "404":
+          description: Original message or target conversationn is not found
                 
 components:
   securitySchemes:
