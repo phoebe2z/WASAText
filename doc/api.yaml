@@ -84,6 +84,28 @@ paths:
         "409":
           description: The name is already exist
           
+  /user/photo:
+    put: 
+      tags: ["user"]
+      summary: Set user photo
+      description: If the user is authenticated, the name will be changed
+      operationId: setMyPhoto
+      requestBody:
+        description: User photo
+        content: 
+          application/json:
+            schema:
+              type: object
+              properties:
+                newPhoto:
+                  type: string
+        required: true
+      responses:
+        "200":
+          description: User name updated successfully
+        "401":
+          description: The user is unauthorized
+          
   /conversations:
     get:
       tags: ["conversations"]
@@ -344,6 +366,37 @@ paths:
               properties:
                 newName:
                   type: string
+        required: true
+      responses:
+        "200":
+          description: Update group name successfully
+        "403":
+          description: No permission to access
+          
+  /groups/{groupId}/photo:
+    parameters:
+      - name: groupId
+        in: path
+        required: true
+        description: this is the group id
+        schema:
+          type: integer
+          description: an incremental number 
+          
+    put:
+      tags: ["group"]
+      summary: Set group photo
+      operationId: setGroupPhoto
+      requestBody:
+        description: Group photo
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                photo:
+                  type: string
+                  format: binary
         required: true
       responses:
         "200":
