@@ -58,7 +58,7 @@ paths:
       summary: Update the user's name
       description: |
         If the user is authenticated and the name is not duplicated with others,
-        the display name will be changed
+        the name will be changed
       operationId: setMyUserName
       requestBody:
         description: User name
@@ -212,6 +212,144 @@ paths:
           description: Message forwarding successfully
         "404":
           description: Original message or target conversationn is not found
+          
+  /messages/{messageId}/reaction:
+    parameters:
+      - name: messageId
+        in: path
+        required: true
+        description: this is the message id
+        schema:
+          type: integer
+          description: an incremental number 
+          
+    post:
+      tags: ["reaction"]
+      summary: Comment message
+      description: Add or update a reaction to the message
+      operationId: commentMessage
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                emoticon:
+                  type: string
+        required: true
+      responses:
+        "200":
+          description: Reaction updated successfully
+        "404":
+          description: Original message or target conversationn is not found
+          
+    delete:
+      tags: ["reaction"]
+      summary: Uncomment message
+      description: Cancel the comment to the message
+      operationId: uncommentMessage
+      responses:
+        "200":
+          description: The reaction was successfullt deleted
+        "404":
+          description: Original message or target conversationn is not found
+          
+  /groups:
+    post:
+      tags: ["group"]
+      summary: Create group
+      description: Create a new group and specify the initial members
+      operationId: createGroup
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                initialMembers:
+                  type: array
+                  items:
+                    type: integer
+        required: true
+      responses:
+        "200":
+          description: Create a new group successfully
+          
+  /groups/{groupId}/members:
+    parameters:
+      - name: groupId
+        in: path
+        required: true
+        description: this is the group id
+        schema:
+          type: integer
+          description: an incremental number 
+          
+    post:
+      tags: ["group"]
+      summary: Add to group
+      description: Group members can add other users to the group 
+      operationId: addToGroup
+      requestBody:
+        content: 
+          application/json:
+            schema:
+              $ref: '#/components/schemas/userIdsRequest'
+        required: true
+      responses:
+        "200":
+          description: Add user successfully
+          
+  /groups/{groupId}/me:
+    parameters:
+      - name: groupId
+        in: path
+        required: true
+        description: this is the group id
+        schema:
+          type: integer
+          description: an incremental number 
+          
+    delete:
+      tags: ["group"]
+      summary: Leave group
+      description: The current user exits the group
+      operationId: leaveGroup
+      responses:
+        "200":
+          description: Leave the group successfully
+          
+  /groups/{groupId}/name:
+    parameters:
+      - name: groupId
+        in: path
+        required: true
+        description: this is the group id
+        schema:
+          type: integer
+          description: an incremental number 
+          
+    put:
+      tags: ["group"]
+      summary: Set group name
+      operationId: setGroupName
+      requestBody:
+        description: Group name
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                newName:
+                  type: string
+        required: true
+      responses:
+        "200":
+          description: Update group name successfully
+        "403":
+          description: No permission to access
                 
 components:
   securitySchemes:
@@ -292,5 +430,14 @@ components:
         - contentType
         - status
         
+    userIdsRequest:
+      type: object
+      properties:
+        userIds:
+          type: array
+          items:
+            type: integer
+      required: [userIds]
+
 security:
   - bearerAuth: []
