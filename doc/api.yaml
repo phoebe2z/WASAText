@@ -6,10 +6,7 @@ info:
   version: "0.0.1"
 
 servers:
-  - url: /api/v1
-    description: Default API Endpoint (Local or deployed)
-  - url: http://localhost:8080/api/v1
-    description: Local development server
+  - url: "http://localhost:8000"
     
 paths:
   /session:
