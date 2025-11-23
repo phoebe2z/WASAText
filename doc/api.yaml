@@ -184,7 +184,7 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
           
   /messages:
-    put:
+    post:
       tags: ["message"]
       summary: Send message
       description: |
@@ -200,19 +200,40 @@ paths:
               properties:
                 conversationId:
                   type: integer
+                  description: The ID of the target conversation
                 content:
                   type: string
+                  description: The text content ot URL for the photo
                 contentType:
                   type: string
                   enum:
                     - text
                     - photo
+                  description: Type pf content being sent
                 replytoId:
                   type: integer
                   nullable: true
+                  description: Optional ID of the message being replied to
+        required: true
       responses:
         "201":
           description: Message sent successfully
+          content:
+            application/json:
+              schema:
+               $ref: "#/components/schemas/message"
+        "401":
+          description: The user is unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Target conversation not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
           
   /messages/{messageId}:
     parameters:
@@ -232,8 +253,25 @@ paths:
       responses:
         "200":
           description: The message was successfullt deleted
+          content: {}
+        "401":
+          description: The user is unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         "403":
           description: No permission to delete this message
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Message not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         
   /messages/{messageId}/forward:
     parameters:
@@ -259,14 +297,26 @@ paths:
               properties:
                 targetConversationIds:
                   type: array
+                  description: List of conversation IDs to forward the message to
                   items:
                     type: integer
         required: true
       responses:
         "200":
           description: Message forwarding successfully
+          content: {}
+        "401":
+          description: The user is unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         "404":
           description: Original message or target conversationn is not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
           
   /messages/{messageId}/reaction:
     parameters:
@@ -284,6 +334,7 @@ paths:
       description: Add or update a reaction to the message
       operationId: commentMessage
       requestBody:
+        description: Reaction emotion
         content:
           application/json:
             schema:
@@ -291,12 +342,24 @@ paths:
               properties:
                 emoticon:
                   type: string
+                  description: The reaction emotion
         required: true
       responses:
         "200":
           description: Reaction updated successfully
+          content: {}
+        "401":
+          description: The user is unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         "404":
           description: Original message or target conversationn is not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
           
     delete:
       tags: ["reaction"]
@@ -306,8 +369,19 @@ paths:
       responses:
         "200":
           description: The reaction was successfullt deleted
+          content: {}
+        "401":
+          description: The user is unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         "404":
           description: Original message or target conversationn is not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
           
   /groups:
     post:
@@ -445,6 +519,18 @@ components:
       bearerFormat: JWT 
       
   schemas:
+    ErrorResponse:
+      type: object
+      description: Standard error response format
+      properties:
+        error:
+          type: string
+          description: A brief description of error
+        code:
+          type: integer
+          description: Optional specific error code
+      required: [error]
+  
     conversation-info:
       type: object
       properties:
