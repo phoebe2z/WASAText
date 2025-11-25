@@ -642,24 +642,34 @@ components:
     
     message:
       type: object
+      description: A complete message object, used in responses
       properties:
+        id:
+          type: integer
+          description: The unique ID of the message
         conversationId:
           type: integer
+          description: The  ID of the conversation the message belongs to
         senderName:
           type: string
+          description: The display name of message sender
         timeStamp:
           type: string
           format: date-time
+          description: The time that message was sent
         content:
           type: string
+          description: The message content details
         contentType:
           type: string
           enum:
             - text
             - photo
+          description: The type of the content
         replyToId:
           type: integer
           nullable: true
+          description: The ID of the message that replying to
         status:
           type: integer
           description: "0: Sent, 1: Received by all, 2: Read by all."
@@ -669,9 +679,11 @@ components:
             - 2
         reactions:
           type: array
+          description: List of reactions to this message
           items: 
             $ref: '#/components/schemas/reaction'
       required:
+        - id
         - conversationId
         - senderName
         - timeStamp
@@ -681,9 +693,11 @@ components:
         
     userIdsRequest:
       type: object
+      description: Request body containing a list of user IDs
       properties:
         userIds:
           type: array
+          description: A list of user IDs
           items:
             type: integer
       required: [userIds]
