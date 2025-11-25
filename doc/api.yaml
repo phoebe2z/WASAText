@@ -397,14 +397,30 @@ paths:
               properties:
                 name:
                   type: string
+                  description: The name of the new group
                 initialMembers:
                   type: array
+                  description: List of user IDs include in the group
                   items:
                     type: integer
         required: true
       responses:
-        "200":
-          description: Create a new group successfully
+        "201":
+          description: Create a new group successfully, returns the new group ID
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  groupId:
+                    type: integer
+                    description: The ID of newly created group
+        "401":
+          description: The user is unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
           
   /groups/{groupId}/members:
     parameters:
@@ -430,6 +446,22 @@ paths:
       responses:
         "200":
           description: Add user successfully
+          content: {}
+        "401":
+          description: The user is unauthorized
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorResponse"}
+        "403":
+          description: No permission to add members to this group
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorResponse"}
+        "404":
+          description: Group not found or some user IDs are invalid
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorResponse"}
           
   /groups/{groupId}/me:
     parameters:
@@ -449,6 +481,17 @@ paths:
       responses:
         "200":
           description: Leave the group successfully
+          content: {}
+        "401":
+          description: The user is unauthorized
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorResponse"}
+        "404":
+          description: Group not found
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorResponse"}
           
   /groups/{groupId}/name:
     parameters:
@@ -473,12 +516,22 @@ paths:
               properties:
                 newName:
                   type: string
+                  description: The new name for the group
         required: true
       responses:
         "200":
           description: Update group name successfully
+          content: {}
+        "401":
+          description: The user is unauthorized
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorResponse"}
         "403":
           description: No permission to access
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorResponse"}
           
   /groups/{groupId}/photo:
     parameters:
@@ -497,19 +550,29 @@ paths:
       requestBody:
         description: Group photo
         content:
-          application/json:
+          multipart/form-data:
             schema:
               type: object
               properties:
                 photo:
                   type: string
                   format: binary
+                  description: The group photo file to upload
         required: true
       responses:
         "200":
           description: Update group name successfully
+          content: {}
+        "401":
+          description: The user is unauthorized
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorResponse"}
         "403":
           description: No permission to access
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorResponse"}
                 
 components:
   securitySchemes:
@@ -533,35 +596,49 @@ components:
   
     conversation-info:
       type: object
+      description: Information about a single conversation shown in the list
       properties:
         conversationId:
           type: integer
+          description: The unique ID of the conversation
         name:
           type: string
+          description: The display name of the conversation
         photoURL:
           type: string
           description: URL to the user/group photo
         isGroup: 
           type: boolean
+          description: True if the conversation is a group chat
         latestMessageTime:
           type: string
           format: date-time
+          description: Timestamp of the latest message
         latestMessagePreview:
           type: string
+          description: A short snippet of the latest message content
         unreadCount:
           type: integer
+          description: Number of unread messages in this conversation
       required:
-        - id
+        - conversationId
         - name
         - isGroup
+        - latestMessageTime
+        - latestMessagePreview
+        - unreadCount
         
     reaction:
       type: object
+      description: A emotion added to a message
       properties:
         reactorName: 
           type: string
-        icon:
+          description: The name of the user who added the reaction
+        emoticon:
           type: string
+          description: The emotion
+      required: [reactorName, emoticon]
     
     message:
       type: object
