@@ -1,27 +1,25 @@
 openapi: 3.0.3
 info:
-  title: WASAText API specification
-  description: |
-    This OpenAPI document describes the API for a messaging web application.
+  title: WASAText API specification (Finalized)
+  description: This OpenAPI document describes the API for a messaging web application.
   version: "0.0.1"
 
 servers:
   - url: http://localhost:8080
     description: Local development server
-    
+
 paths:
   /session:
     post:
       tags: ["login"]
       summary: Logs in the user
       description: |
-        If the user does not exist, it will be created,
-        and an identifier is returned.
-        If the user exists, the user identifier is returned.
+        If the user does not exist, it will be created, and an identifier is returned. 
+        If the user exists, the user identifier is returned
       operationId: doLogin
       security: []
       requestBody:
-        description: User details
+        description: User name details for login/registration
         content:
           application/json:
             schema:
@@ -29,12 +27,13 @@ paths:
               properties:
                 name:
                   type: string
-                  description: The display name used for login or rigistration
+                  description: The display name used for login or registration.
                   example: Maria
                   pattern: '^.*?$'
                   minLength: 3
                   maxLength: 16
-        required: true
+              required:
+                - name
       responses:
         "201":
           description: User log-in action successful
@@ -45,7 +44,7 @@ paths:
                 properties:
                   identifier:
                     type: integer
-                    description: The unique ID to be used in the Authorization
+                    description: The unique User ID to be used in the Authorization header.
                     example: 1001
         "400":
           description: The length of the name is out of range
@@ -53,17 +52,15 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-  
+
   /user/name:
     put:
       tags: ["user"]
       summary: Update the user's name
-      description: |
-        If the user is authenticated and the name is not duplicated with others,
-        the name will be changed
+      description: If the user is authenticated and the name is not duplicated with others, the name will be changed.
       operationId: setMyUserName
       requestBody:
-        description: User name
+        description: New user name
         content:
           application/json:
             schema:
@@ -71,12 +68,13 @@ paths:
               properties:
                 newName:
                   type: string
-                  description: The new display name for the user
-                  example: Maria
+                  description: The new display name for the user.
+                  example: MariaNew
                   pattern: '^.*?$'
                   minLength: 3
                   maxLength: 16
-        required: true
+              required:
+                - newName
       responses:
         "200":
           description: User name updated successfully
@@ -85,54 +83,51 @@ paths:
           description: The length of the name is out of range
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+              schema: {$ref: "#/components/schemas/ErrorResponse"}
         "401":
           description: The user is unauthorized
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+              schema: {$ref: "#/components/schemas/ErrorResponse"}
         "409":
           description: The name is already exist
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-          
+              schema: {$ref: "#/components/schemas/ErrorResponse"}
+
   /user/photo:
-    put: 
+    put:
       tags: ["user"]
       summary: Set user photo
-      description: If the user is authenticated, the name will be changed
+      description: If the user is authenticated, the profile photo will be uploaded and set.
       operationId: setMyPhoto
       requestBody:
-        description: User photo
-        content: 
-          application/json:
+        description: User photo file
+        content:
+          multipart/form-data: 
             schema:
               type: object
               properties:
                 newPhoto:
                   type: string
                   format: binary
-                  description: The profile photo file to upload
-        required: true
+                  description: The profile photo file to upload.
+              required:
+                - newPhoto
       responses:
         "200":
-          description: User name updated successfully
+          description: User photo updated successfully
           content: {}
         "401":
           description: The user is unauthorized
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-          
+              schema: {$ref: "#/components/schemas/ErrorResponse"}
+
   /conversations:
     get:
       tags: ["conversations"]
-      summary: Retrive conversations
+      summary: Retrieve conversations list
       description: List all the conversations of the users, sorted reverse chronologically.
       operationId: getMyConversations
       responses:
@@ -142,57 +137,54 @@ paths:
             application/json:
               schema:
                 type: array
-                description: Array of conversation list items
+                description: Array of conversation list items.
+                minItems: 0 
                 items:
                   $ref: "#/components/schemas/conversation-info"
         "401":
           description: The user is unauthorized
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        
+              schema: {$ref: "#/components/schemas/ErrorResponse"}
+
   /conversations/{conversationId}:
     parameters:
       - name: conversationId
         in: path
         required: true
-        description: this is the conversation id
+        description: The unique ID for the conversation.
         schema:
           type: integer
-          description: an incremental number e.g., /1234 for each conversation 
-          
+          description: an incremental number e.g., 1234 for each conversation
     get:
       tags: ["conversations"]
       summary: Get a specific conversation history
       operationId: getConversation
       responses:
         "200":
-          description: Successfully retrieved the conversation
-          content: 
-            application/json:
-              schema:
-                type: array
-                description: Array of messages in the conversation, reverse chronologically
-                items:
-                  $ref: "#/components/schemas/message"
-        "404":
-          description:  conversation not found
+          description: Successfully retrieved the conversation history (messages).
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ErrorResponse"
-          
+                type: array
+                description: Array of messages in the conversation, reverse chronologically.
+                minItems: 0 
+                items:
+                  $ref: "#/components/schemas/message"
+        "404":
+          description: Conversation not found
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorResponse"}
+
   /messages:
     post:
       tags: ["message"]
       summary: Send message
-      description: |
-        Send a new message(text or photo) to the conversation 
-        or reply an old message
+      description: Send a new message (text or photo) to the conversation or reply to an old message.
       operationId: sendMessage
       requestBody:
-        description: message details
+        description: Message details for sending
         content:
           application/json:
             schema:
@@ -200,93 +192,85 @@ paths:
               properties:
                 conversationId:
                   type: integer
-                  description: The ID of the target conversation
+                  description: The ID of the target conversation.
                 content:
                   type: string
-                  description: The text content ot URL for the photo
+                  description: The text content. If `contentType` is `photo`, this is the uploaded photo ID or URL.
+                  minLength: 1 
+                  maxLength: 4096 
                 contentType:
                   type: string
-                  enum:
-                    - text
-                    - photo
-                  description: Type pf content being sent
+                  enum: [text, photo]
+                  description: Type of content being sent.
                 replytoId:
                   type: integer
                   nullable: true
-                  description: Optional ID of the message being replied to
-        required: true
+                  description: Optional ID of the message being replied to.
+              required:
+                - conversationId
+                - content
+                - contentType
       responses:
         "201":
-          description: Message sent successfully
+          description: Message sent successfully, returns the created message object.
           content:
             application/json:
               schema:
-               $ref: "#/components/schemas/message"
+                $ref: "#/components/schemas/message"
         "401":
           description: The user is unauthorized
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+              schema: {$ref: "#/components/schemas/ErrorResponse"}
         "404":
           description: Target conversation not found
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-          
+              schema: {$ref: "#/components/schemas/ErrorResponse"}
+
   /messages/{messageId}:
     parameters:
       - name: messageId
         in: path
         required: true
-        description: this is the message id
-        schema:
-          type: integer
-          description: an incremental number 
-          
+        description: The unique message ID.
+        schema: {type: integer}
     delete:
       tags: ["message"]
       summary: Delete message
-      description: Only the sender can choose to delete the message he sent
+      description: Only the sender can choose to delete the message he sent.
       operationId: deleteMessage
       responses:
         "200":
-          description: The message was successfullt deleted
+          description: The message was successfully deleted
           content: {}
         "401":
           description: The user is unauthorized
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+              schema: {$ref: "#/components/schemas/ErrorResponse"}
         "403":
           description: No permission to delete this message
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+              schema: {$ref: "#/components/schemas/ErrorResponse"}
         "404":
           description: Message not found
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        
+              schema: {$ref: "#/components/schemas/ErrorResponse"}
+
   /messages/{messageId}/forward:
     parameters:
       - name: messageId
         in: path
         required: true
-        description: this is the message id
-        schema:
-          type: integer
-          description: an incremental number 
-          
+        description: The unique message ID to forward.
+        schema: {type: integer}
     post:
       tags: ["message"]
       summary: Forward message
-      description: Forward a message to one or more other conversations
+      description: Forward a message to one or more other conversations.
       operationId: forwardMessage
       requestBody:
         description: target conversation details
@@ -297,10 +281,11 @@ paths:
               properties:
                 targetConversationIds:
                   type: array
-                  description: List of conversation IDs to forward the message to
-                  items:
-                    type: integer
-        required: true
+                  description: List of conversation IDs to forward the message to.
+                  minItems: 1 
+                  items: {type: integer}
+              required:
+                - targetConversationIds
       responses:
         "200":
           description: Message forwarding successfully
@@ -309,32 +294,27 @@ paths:
           description: The user is unauthorized
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+              schema: {$ref: "#/components/schemas/ErrorResponse"}
         "404":
-          description: Original message or target conversationn is not found
+          description: Original message or target conversation is not found
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-          
+              schema: {$ref: "#/components/schemas/ErrorResponse"}
+
   /messages/{messageId}/reaction:
     parameters:
       - name: messageId
         in: path
         required: true
-        description: this is the message id
-        schema:
-          type: integer
-          description: an incremental number 
-          
+        description: The unique message ID.
+        schema: {type: integer}
     post:
       tags: ["reaction"]
-      summary: Comment message
-      description: Add or update a reaction to the message
+      summary: Comment message (Add/Update reaction)
+      description: Add or update a reaction (emoticon) to the message.
       operationId: commentMessage
       requestBody:
-        description: Reaction emotion
+        description: Reaction emoticon
         content:
           application/json:
             schema:
@@ -342,8 +322,11 @@ paths:
               properties:
                 emoticon:
                   type: string
-                  description: The reaction emotion
-        required: true
+                  description: The reaction emoticon 
+                  minLength: 1 
+                  maxLength: 10 
+              required:
+                - emoticon
       responses:
         "200":
           description: Reaction updated successfully
@@ -352,42 +335,38 @@ paths:
           description: The user is unauthorized
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+              schema: {$ref: "#/components/schemas/ErrorResponse"}
         "404":
-          description: Original message or target conversationn is not found
+          description: Original message not found
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-          
+              schema: {$ref: "#/components/schemas/ErrorResponse"}
+
     delete:
       tags: ["reaction"]
-      summary: Uncomment message
-      description: Cancel the comment to the message
+      summary: Uncomment message (Delete reaction)
+      description: Cancel the reaction to the message by the current user.
       operationId: uncommentMessage
       responses:
         "200":
-          description: The reaction was successfullt deleted
+          description: The reaction was successfully deleted
           content: {}
         "401":
           description: The user is unauthorized
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+              schema: {$ref: "#/components/schemas/ErrorResponse"}
         "404":
-          description: Original message or target conversationn is not found
+          description: Original message or reaction not found
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-          
+              schema: {$ref: "#/components/schemas/ErrorResponse"}
+
   /groups:
     post:
       tags: ["group"]
       summary: Create group
-      description: Create a new group and specify the initial members
+      description: Create a new group and specify the initial members.
       operationId: createGroup
       requestBody:
         content:
@@ -397,16 +376,20 @@ paths:
               properties:
                 name:
                   type: string
-                  description: The name of the new group
+                  description: The name of the new group.
+                  minLength: 3
+                  maxLength: 50
                 initialMembers:
                   type: array
-                  description: List of user IDs include in the group
-                  items:
-                    type: integer
-        required: true
+                  description: List of user IDs to include in the group (excluding the creator).
+                  minItems: 2
+                  maxItems: 100 
+                  items: {type: integer}
+              required:
+                - name
       responses:
         "201":
-          description: Create a new group successfully, returns the new group ID
+          description: Create a new group successfully, returns the new group ID.
           content:
             application/json:
               schema:
@@ -414,35 +397,31 @@ paths:
                 properties:
                   groupId:
                     type: integer
-                    description: The ID of newly created group
+                    description: The ID of the newly created group.
         "401":
           description: The user is unauthorized
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-          
+              schema: {$ref: "#/components/schemas/ErrorResponse"}
+
   /groups/{groupId}/members:
     parameters:
       - name: groupId
         in: path
         required: true
-        description: this is the group id
-        schema:
-          type: integer
-          description: an incremental number 
-          
+        description: The group ID to add members to.
+        schema: {type: integer}
     post:
       tags: ["group"]
       summary: Add to group
-      description: Group members can add other users to the group 
+      description: Group members can add other users to the group.
       operationId: addToGroup
       requestBody:
-        content: 
+        content:
           application/json:
             schema:
               $ref: '#/components/schemas/userIdsRequest'
-        required: true
+            required: true
       responses:
         "200":
           description: Add user successfully
@@ -453,30 +432,27 @@ paths:
             application/json:
               schema: {$ref: "#/components/schemas/ErrorResponse"}
         "403":
-          description: No permission to add members to this group
+          description: No permission to add members to this group.
           content:
             application/json:
               schema: {$ref: "#/components/schemas/ErrorResponse"}
         "404":
-          description: Group not found or some user IDs are invalid
+          description: Group not found or some user IDs are invalid.
           content:
             application/json:
               schema: {$ref: "#/components/schemas/ErrorResponse"}
-          
+
   /groups/{groupId}/me:
     parameters:
       - name: groupId
         in: path
         required: true
-        description: this is the group id
-        schema:
-          type: integer
-          description: an incremental number 
-          
+        description: The group ID to leave.
+        schema: {type: integer}
     delete:
       tags: ["group"]
       summary: Leave group
-      description: The current user exits the group
+      description: The current user exits the group.
       operationId: leaveGroup
       responses:
         "200":
@@ -488,27 +464,24 @@ paths:
             application/json:
               schema: {$ref: "#/components/schemas/ErrorResponse"}
         "404":
-          description: Group not found
+          description: Group not found.
           content:
             application/json:
               schema: {$ref: "#/components/schemas/ErrorResponse"}
-          
+
   /groups/{groupId}/name:
     parameters:
       - name: groupId
         in: path
         required: true
-        description: this is the group id
-        schema:
-          type: integer
-          description: an incremental number 
-          
+        description: The group ID to set the name for.
+        schema: {type: integer}
     put:
       tags: ["group"]
       summary: Set group name
       operationId: setGroupName
       requestBody:
-        description: Group name
+        description: New group name
         content:
           application/json:
             schema:
@@ -516,8 +489,11 @@ paths:
               properties:
                 newName:
                   type: string
-                  description: The new name for the group
-        required: true
+                  description: The new name for the group.
+                  minLength: 3 
+                  maxLength: 50
+              required:
+                - newName
       responses:
         "200":
           description: Update group name successfully
@@ -528,27 +504,24 @@ paths:
             application/json:
               schema: {$ref: "#/components/schemas/ErrorResponse"}
         "403":
-          description: No permission to access
+          description: No permission to access (e.g., not a member).
           content:
             application/json:
               schema: {$ref: "#/components/schemas/ErrorResponse"}
-          
+
   /groups/{groupId}/photo:
     parameters:
       - name: groupId
         in: path
         required: true
-        description: this is the group id
-        schema:
-          type: integer
-          description: an incremental number 
-          
+        description: The group ID to set the photo for.
+        schema: {type: integer}
     put:
       tags: ["group"]
       summary: Set group photo
       operationId: setGroupPhoto
       requestBody:
-        description: Group photo
+        description: Group photo file
         content:
           multipart/form-data:
             schema:
@@ -557,11 +530,12 @@ paths:
                 photo:
                   type: string
                   format: binary
-                  description: The group photo file to upload
-        required: true
+                  description: The group photo file to upload.
+              required:
+                - photo
       responses:
         "200":
-          description: Update group name successfully
+          description: Update group photo successfully
           content: {}
         "401":
           description: The user is unauthorized
@@ -569,57 +543,62 @@ paths:
             application/json:
               schema: {$ref: "#/components/schemas/ErrorResponse"}
         "403":
-          description: No permission to access
+          description: No permission to access.
           content:
             application/json:
               schema: {$ref: "#/components/schemas/ErrorResponse"}
-                
+
 components:
   securitySchemes:
-    bearerAuth: 
+    bearerAuth:
       type: http
       scheme: bearer
-      bearerFormat: JWT 
-      
+      bearerFormat: WASAText-ID 
+      description: Authentication is performed by passing the user's ID (identifier) in the Authorization header as a Bearer token.
+
   schemas:
     ErrorResponse:
       type: object
-      description: Standard error response format
+      description: Standard error response format.
       properties:
         error:
           type: string
-          description: A brief description of error
+          description: A brief description of the error.
         code:
           type: integer
-          description: Optional specific error code
+          description: Optional specific error code.
       required: [error]
-  
+
     conversation-info:
       type: object
-      description: Information about a single conversation shown in the list
+      description: Information about a single conversation shown in the list.
       properties:
         conversationId:
           type: integer
-          description: The unique ID of the conversation
+          description: The unique ID of the conversation.
         name:
           type: string
-          description: The display name of the conversation
+          description: The display name of the conversation (other user's name or group name).
+          minLength: 1 
         photoURL:
           type: string
-          description: URL to the user/group photo
-        isGroup: 
+          description: URL to the user/group photo.
+          format: url 
+        isGroup:
           type: boolean
-          description: True if the conversation is a group chat
+          description: True if the conversation is a group chat.
         latestMessageTime:
           type: string
           format: date-time
-          description: Timestamp of the latest message
+          description: Timestamp of the latest message.
         latestMessagePreview:
           type: string
-          description: A short snippet of the latest message content
+          description: A short snippet of the latest message content.
+          minLength: 0 
         unreadCount:
           type: integer
-          description: Number of unread messages in this conversation
+          description: Number of unread messages in this conversation.
+          minimum: 0 
       required:
         - conversationId
         - name
@@ -627,60 +606,58 @@ components:
         - latestMessageTime
         - latestMessagePreview
         - unreadCount
-        
+
     reaction:
       type: object
-      description: A emotion added to a message
+      description: A reaction (emoticon) added to a message.
       properties:
-        reactorName: 
+        reactorName:
           type: string
-          description: The name of the user who added the reaction
+          description: The name of the user who added the reaction.
         emoticon:
           type: string
-          description: The emotion
+          description: The emoticon itself (e.g., "👍").
+          minLength: 1
       required: [reactorName, emoticon]
-    
+
     message:
       type: object
-      description: A complete message object, used in responses
+      description: A complete message object, used in responses.
       properties:
         id:
           type: integer
-          description: The unique ID of the message
+          description: The unique ID of the message.
         conversationId:
           type: integer
-          description: The  ID of the conversation the message belongs to
+          description: The ID of the conversation the message belongs to.
         senderName:
           type: string
-          description: The display name of message sender
+          description: The display name of message sender.
         timeStamp:
           type: string
           format: date-time
-          description: The time that message was sent
+          description: The time the message was sent.
         content:
           type: string
-          description: The message content details
+          description: The message content. If `contentType` is `photo`, this is the photo ID or URL.
+          minLength: 0
         contentType:
           type: string
-          enum:
-            - text
-            - photo
-          description: The type of the content
+          enum: [text, photo]
+          description: The type of the content.
         replyToId:
           type: integer
           nullable: true
-          description: The ID of the message that replying to
+          description: The ID of the message that replying to.
         status:
           type: integer
-          description: "0: Sent, 1: Received by all, 2: Read by all."
-          enum:
-            - 0
-            - 1
-            - 2
+          description: "Message read status: 0=Sent, 1=Received, 2=Read."
+          enum: [0, 1, 2]
         reactions:
           type: array
-          description: List of reactions to this message
-          items: 
+          description: List of reactions to this message.
+          minItems: 0 
+          items:
             $ref: '#/components/schemas/reaction'
       required:
         - id
@@ -690,16 +667,17 @@ components:
         - content
         - contentType
         - status
-        
+
     userIdsRequest:
       type: object
-      description: Request body containing a list of user IDs
+      description: Request body containing a list of user IDs.
       properties:
         userIds:
           type: array
-          description: A list of user IDs
-          items:
-            type: integer
+          description: A list of user IDs 
+          minItems: 1 
+          maxItems: 50 
+          items: {type: integer}
       required: [userIds]
 
 security:
