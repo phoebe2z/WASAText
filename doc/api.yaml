@@ -4,6 +4,20 @@ info:
   description: |
     This OpenAPI document describes the API for a messaging web application.
   version: "0.0.1"
+  
+tags:
+  - name: login
+    description: User session and authentication operations.
+  - name: user
+    description: User profile management.
+  - name: conversations
+    description: Retrieval of conversation lists and history.
+  - name: message
+    description: Sending, deleting, and forwarding messages.
+  - name: reaction
+    description: Adding and removing reactions to messages.
+  - name: group
+    description: Group chat creation and management.
 
 servers:
   - url: http://localhost:8080
@@ -108,7 +122,7 @@ paths:
     put: 
       tags: ["user"]
       summary: Set user photo
-      description: If the user is authenticated, the name will be changed
+      description: If the user is authenticated, the photo will be changed
       operationId: setMyPhoto
       requestBody:
         description: User photo
@@ -535,6 +549,7 @@ paths:
       tags: ["group"]
       summary: Set group name
       operationId: setGroupName
+      description: Updates the display name for an existing group
       requestBody:
         description: Group name
         content:
@@ -579,6 +594,7 @@ paths:
       tags: ["group"]
       summary: Set group photo
       operationId: setGroupPhoto
+      description: Uploads and sets a new profile pricture for the group
       requestBody:
         description: Group photo
         content:
@@ -643,10 +659,12 @@ components:
           type: string
           description: The display name of the conversation
           minLength: 1
+          maxLength: 20
         photoURL:
           type: string
           format: url
           description: URL to the user/group photo
+          pattern: '^https?://.+$'
         isGroup: 
           type: boolean
           description: True if the conversation is a group chat
@@ -658,6 +676,7 @@ components:
           type: string
           description: A short snippet of the latest message content
           minLength: 0
+          maxLength: 99
         unreadCount:
           type: integer
           description: Number of unread messages in this conversation
@@ -677,10 +696,13 @@ components:
         reactorName: 
           type: string
           description: The name of the user who added the reaction
+          minLength: 3
+          maxLength: 16
         emoticon:
           type: string
           description: The emotion
           minLength: 1
+          maxLength: 1
       required: 
         - reactorName
         - emoticon
@@ -726,6 +748,7 @@ components:
           type: array
           description: List of reactions to this message
           minItems: 0
+          maxItems: 10
           items: 
             $ref: '#/components/schemas/reaction'
       required:
@@ -744,6 +767,8 @@ components:
         userIds:
           type: array
           description: A list of user IDs
+          minItems: 1
+          maxItems: 50
           items:
             type: integer
       required: 
