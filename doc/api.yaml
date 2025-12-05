@@ -226,7 +226,7 @@ paths:
                   description: The ID of the target conversation
                 content:
                   type: string
-                  description: The text content ot URL for the photo
+                  description: The text content or URL for the photo
                   minLength: 1
                   maxLength: 4096
                 contentType:
@@ -237,7 +237,7 @@ paths:
                   description: Type pf content being sent
                 replytoId:
                   type: integer
-                  nullable: true
+                  nullable: oneOf [integer, null]
                   description: Optional ID of the message being replied to
               required:
                 - conversationId
@@ -429,6 +429,7 @@ paths:
                   description: The name of the new group
                   minLength: 3
                   maxLength: 20
+                  pattern: '^.*?$'
                 initialMembers:
                   type: array
                   description: List of user IDs include in the group (excluding the creator)
@@ -558,6 +559,7 @@ paths:
                   description: The new name for the group
                   minLength: 3
                   maxLength: 20
+                  pattern: '^.*?$'
               required:
                - newName
         required: true
@@ -659,6 +661,7 @@ components:
           description: The display name of the conversation
           minLength: 1
           maxLength: 20
+          pattern: '^.*?$'
         photoURL:
           type: string
           format: url
@@ -697,6 +700,7 @@ components:
           description: The name of the user who added the reaction
           minLength: 3
           maxLength: 16
+          pattern: '^.*?$'
         emoticon:
           type: string
           description: The emotion
@@ -721,6 +725,7 @@ components:
           description: The display name of message sender
           minLength: 1
           maxLength: 16
+          pattern: '^.*?$'
         timeStamp:
           type: string
           format: date-time
@@ -738,7 +743,7 @@ components:
           description: The type of the content
         replyToId:
           type: integer
-          nullable: true
+          nullable: oneOf [integer, null]
           description: The ID of the message that replying to
         status:
           type: integer
