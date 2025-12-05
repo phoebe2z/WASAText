@@ -40,6 +40,7 @@ paths:
           application/json:
             schema:
               type: object
+              description: The user name that conforms to the format
               properties:
                 name:
                   type: string
@@ -58,6 +59,7 @@ paths:
             application/json:
               schema:
                 type: object
+                description: User ID
                 properties:
                   identifier:
                     type: integer
@@ -67,8 +69,7 @@ paths:
           description: The length of the name is out of range
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+              schema: {$ref: "#/components/schemas/ErrorResponse"}
   
   /user/name:
     put:
@@ -84,6 +85,7 @@ paths:
           application/json:
             schema:
               type: object
+              description: The user name that conforms to the format
               properties:
                 newName:
                   type: string
@@ -103,20 +105,17 @@ paths:
           description: The length of the name is out of range
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+              schema: {$ref: "#/components/schemas/ErrorResponse"}
         "401":
           description: The user is unauthorized
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+              schema: {$ref: "#/components/schemas/ErrorResponse"}
         "409":
           description: The name is already exist
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+              schema: {$ref: "#/components/schemas/ErrorResponse"}
           
   /user/photo:
     put: 
@@ -130,6 +129,7 @@ paths:
           multipart/form-data:
             schema:
               type: object
+              description: User's profile photo file
               properties:
                 newPhoto:
                   type: string
@@ -146,8 +146,7 @@ paths:
           description: The user is unauthorized
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+              schema: {$ref: "#/components/schemas/ErrorResponse"}
           
   /conversations:
     get:
@@ -164,14 +163,14 @@ paths:
                 type: array
                 description: Array of conversation list items
                 minItems: 0
+                maxItems: 20
                 items:
                   $ref: "#/components/schemas/conversation-info"
         "401":
           description: The user is unauthorized
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+              schema: {$ref: "#/components/schemas/ErrorResponse"}
         
   /conversations/{conversationId}:
     parameters:
@@ -185,7 +184,8 @@ paths:
           
     get:
       tags: ["conversations"]
-      summary: Get a specific conversation history
+      summary: Retrieval conversation
+      description: Get a specific conversation history
       operationId: getConversation
       responses:
         "200":
@@ -196,14 +196,14 @@ paths:
                 type: array
                 description: Array of messages in the conversation, reverse chronologically
                 minItems: 0
+                maxItems: 2000
                 items:
                   $ref: "#/components/schemas/message"
         "404":
           description:  conversation not found
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+              schema: {$ref: "#/components/schemas/ErrorResponse"}
           
   /messages:
     post:
@@ -219,6 +219,7 @@ paths:
           application/json:
             schema:
               type: object
+              description: Information about the message
               properties:
                 conversationId:
                   type: integer
@@ -254,14 +255,12 @@ paths:
           description: The user is unauthorized
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+              schema: {$ref: "#/components/schemas/ErrorResponse"}
         "404":
           description: Target conversation not found
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+              schema: {$ref: "#/components/schemas/ErrorResponse"}
           
   /messages/{messageId}:
     parameters:
@@ -286,20 +285,17 @@ paths:
           description: The user is unauthorized
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+              schema: {$ref: "#/components/schemas/ErrorResponse"}
         "403":
           description: No permission to delete this message
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+              schema: {$ref: "#/components/schemas/ErrorResponse"}
         "404":
           description: Message not found
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+              schema: {$ref: "#/components/schemas/ErrorResponse"}
         
   /messages/{messageId}/forward:
     parameters:
@@ -322,11 +318,13 @@ paths:
           application/json:
             schema:
               type: object
+              description: Array of target conversation details
               properties:
                 targetConversationIds:
                   type: array
                   description: List of conversation IDs to forward the message to
                   minItems: 1
+                  maxItems: 10
                   items:
                     type: integer
               required:
@@ -340,14 +338,12 @@ paths:
           description: The user is unauthorized
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+              schema: {$ref: "#/components/schemas/ErrorResponse"}
         "404":
           description: Original message or target conversationn is not found
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+              schema: {$ref: "#/components/schemas/ErrorResponse"}
           
   /messages/{messageId}/reaction:
     parameters:
@@ -370,11 +366,13 @@ paths:
           application/json:
             schema:
               type: object
+              description: The emoticon info
               properties:
                 emoticon:
                   type: string
                   description: The reaction emotion
                   minLength: 1
+                  maxLength: 1
               required: 
                 - emoticon
         required: true
@@ -386,14 +384,12 @@ paths:
           description: The user is unauthorized
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+              schema: {$ref: "#/components/schemas/ErrorResponse"}
         "404":
           description: Original message or target conversationn is not found
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+              schema: {$ref: "#/components/schemas/ErrorResponse"}
           
     delete:
       tags: ["reaction"]
@@ -408,14 +404,12 @@ paths:
           description: The user is unauthorized
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+              schema: {$ref: "#/components/schemas/ErrorResponse"}
         "404":
           description: Original message or target conversationn is not found
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+              schema: {$ref: "#/components/schemas/ErrorResponse"}
           
   /groups:
     post:
@@ -428,6 +422,7 @@ paths:
           application/json:
             schema:
               type: object
+              description: The name and members of the new group
               properties:
                 name:
                   type: string
@@ -453,6 +448,7 @@ paths:
             application/json:
               schema:
                 type: object
+                description: The new group ID
                 properties:
                   groupId:
                     type: integer
@@ -461,8 +457,7 @@ paths:
           description: The user is unauthorized
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+              schema: {$ref: "#/components/schemas/ErrorResponse"}
           
   /groups/{groupId}/members:
     parameters:
@@ -556,6 +551,7 @@ paths:
           application/json:
             schema:
               type: object
+              description: The new group name info
               properties:
                 newName:
                   type: string
@@ -601,6 +597,7 @@ paths:
           multipart/form-data:
             schema:
               type: object
+              description: The group photo file
               properties:
                 photo:
                   type: string
@@ -642,6 +639,8 @@ components:
         error:
           type: string
           description: A brief description of error
+          minLength: 0
+          maxLength: 200
         code:
           type: integer
           description: Optional specific error code
@@ -720,6 +719,8 @@ components:
         senderName:
           type: string
           description: The display name of message sender
+          minLength: 1
+          maxLength: 16
         timeStamp:
           type: string
           format: date-time
@@ -727,6 +728,8 @@ components:
         content:
           type: string
           description: The message content details
+          minLength: 1
+          maxLength: 200
         contentType:
           type: string
           enum:
