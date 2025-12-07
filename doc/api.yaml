@@ -228,7 +228,7 @@ paths:
                   type: string
                   description: The text content or URL for the photo
                   minLength: 1
-                  maxLength: 4096
+                  maxLength: 200
                 contentType:
                   type: string
                   enum:
