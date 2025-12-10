@@ -237,7 +237,7 @@ paths:
                   description: Type pf content being sent
                 replytoId:
                   type: integer
-                  nullable: oneOf [integer, null]
+                  nullable: true
                   description: Optional ID of the message being replied to
               required:
                 - conversationId
@@ -743,7 +743,7 @@ components:
           description: The type of the content
         replyToId:
           type: integer
-          nullable: oneOf [integer, null]
+          nullable: true
           description: The ID of the message that replying to
         status:
           type: integer
