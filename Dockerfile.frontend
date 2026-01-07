@@ -1,0 +1,32 @@
+# Build stage
+FROM node:18-alpine as build-stage
+
+WORKDIR /app
+
+# Copy package files from webui directory
+COPY webui/package.json webui/yarn.lock ./
+# Copy .yarnrc.yml if specific yarn version/config is needed
+COPY webui/.yarnrc.yml ./
+COPY webui/.yarn ./.yarn
+
+# Install dependencies (using yarn as specified in package.json)
+RUN yarn install --immutable --immutable-cache
+
+# Copy the rest of the webui source code
+COPY webui/ .
+
+# Build the application for production
+# This matches the "build-prod" script in package.json: "vite build --mode production"
+RUN yarn build-prod
+
+# Production stage
+FROM nginx:alpine as production-stage
+
+# Copy the build output to Nginx's default html directory
+COPY --from=build-stage /app/dist /usr/share/nginx/html
+
+# Expose port 80
+EXPOSE 80
+
+# Start Nginx
+CMD ["nginx", "-g", "daemon off;"]

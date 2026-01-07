@@ -1,0 +1,35 @@
+# Build stage
+FROM golang:1.19 AS build-stage
+
+WORKDIR /app
+
+# Copy go module files
+COPY go.mod go.sum ./
+
+# Download dependencies
+# Check if vendor directory exists and is populated, can use -mod=vendor if verified
+# For now, we rely on go mod download or vendor if present.
+RUN go mod download
+
+# Copy the source code
+COPY . .
+
+# Build the application
+# Targeting the main webapi executable
+RUN go build -o webapi ./cmd/webapi
+
+# Runtime stage
+# Runtime stage (IMPORTANT: same Debian generation)
+FROM debian:bookworm-slim
+
+WORKDIR /app
+
+# Copy the binary from build stage
+COPY --from=build-stage /app/webapi .
+# Copy internal certificates or other resources if needed (not seen in inspection)
+
+# Expose API port (3000) and Debug port (4000) based on default configuration
+EXPOSE 3000 4000
+
+# Set entrypoint
+CMD ["./webapi"]
