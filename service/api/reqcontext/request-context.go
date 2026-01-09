@@ -18,4 +18,7 @@ type RequestContext struct {
 
 	// Logger is a custom field logger for the request
 	Logger logrus.FieldLogger
+
+	// AuthenticatedUser is the ID of the authenticated user (0 if not authenticated)
+	AuthenticatedUser int64
 }

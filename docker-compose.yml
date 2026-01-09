@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: wasatext-backend
+    ports:
+      - "3000:3000"  # API port
+      - "4000:4000"  # Debug port
+    environment:
+      - CGO_ENABLED=1
+    volumes:
+      - ./data:/app/data  # Persist database
+    restart: unless-stopped
+    networks:
+      - wasatext-network
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: wasatext-frontend
+    ports:
+      - "8080:80"  # Frontend on port 8080
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - wasatext-network
+
+networks:
+  wasatext-network:
+    driver: bridge
+
+volumes:
+  data:
