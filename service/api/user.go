@@ -147,3 +147,21 @@ func (rt *_router) getMyProfile(w http.ResponseWriter, r *http.Request, ps httpr
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(user)
 }
+func (rt *_router) listUsers(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	_, err := extractBearer(r)
+	if err != nil {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	query := r.URL.Query().Get("q")
+	users, err := rt.db.ListUsers(query)
+	if err != nil {
+		rt.baseLogger.WithError(err).Error("error listing users")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(users)
+}

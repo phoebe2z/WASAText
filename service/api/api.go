@@ -90,6 +90,7 @@ func New(cfg Config) (Router, error) {
 	router.PUT("/user/name", r.setMyUserName)
 	router.PUT("/user/photo", r.setMyPhoto)
 	router.GET("/user/me", r.getMyProfile)
+	router.GET("/users", r.listUsers)
 
 	router.POST("/conversations", r.createConversation)
 	router.GET("/conversations", r.getMyConversations)

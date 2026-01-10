@@ -5,9 +5,16 @@ export default {
     data() {
         return {
             searchQuery: "",
-            viewMode: 'list', // 'list', 'new_chat', 'new_contact'
+            viewMode: 'list', // 'list', 'new_chat', 'new_contact', 'new_group', 'group_details'
             newContactName: "",
-            errorMessage: ""
+            errorMessage: "",
+            
+            // New Group Flow
+            allUsers: [],
+            selectedUsers: [], // Array of user objects
+            groupName: "",
+            groupPhoto: null,
+            groupSearch: ""
         }
     },
     computed: {
@@ -18,6 +25,10 @@ export default {
                 (c.name && c.name.toLowerCase().includes(query)) ||
                 (c.latestMessagePreview && c.latestMessagePreview.toLowerCase().includes(query))
             );
+        },
+        filteredUsers() {
+            const query = this.groupSearch.toLowerCase();
+            return this.allUsers.filter(u => u.name.toLowerCase().includes(query));
         }
     },
     methods: {
@@ -31,18 +42,44 @@ export default {
             this.errorMessage = "";
             this.newContactName = "";
         },
+        async openNewGroup() {
+            this.viewMode = 'new_group';
+            this.selectedUsers = [];
+            this.groupSearch = "";
+            await this.fetchUsers();
+        },
+        async fetchUsers() {
+            try {
+                let res = await this.$axios.get("/users");
+                this.allUsers = res.data;
+            } catch (e) {
+                console.error("Error fetching users", e);
+            }
+        },
+        toggleUserSelection(user) {
+            const idx = this.selectedUsers.findIndex(u => u.id === user.id);
+            if (idx > -1) {
+                this.selectedUsers.splice(idx, 1);
+            } else {
+                this.selectedUsers.push(user);
+            }
+        },
+        goToGroupDetails() {
+            if (this.selectedUsers.length < 2) return;
+            this.viewMode = 'group_details';
+            this.groupName = "";
+        },
         goBack() {
              this.errorMessage = "";
-             if (this.viewMode === 'new_contact') this.viewMode = 'new_chat';
+             if (this.viewMode === 'new_contact' || this.viewMode === 'new_group') this.viewMode = 'new_chat';
+             else if (this.viewMode === 'group_details') this.viewMode = 'new_group';
              else this.viewMode = 'list';
         },
         async createDM() {
             if (!this.newContactName) return;
             this.errorMessage = "";
-            
             try {
                 let res = await this.$axios.post("/conversations", { recipientName: this.newContactName });
-                // Success
                 this.newContactName = "";
                 this.viewMode = 'list';
                 this.$emit('chat-created', res.data.conversationId);
@@ -50,15 +87,28 @@ export default {
                 if (e.response && e.response.status === 404) {
                     this.errorMessage = "User not found";
                 } else if (e.response && e.response.status === 400) {
-                     // Could be self-chat or bad request
                      this.errorMessage = "Invalid user (cannot chat with yourself)";
                 } else {
                     this.errorMessage = "Error: " + (e.response ? e.response.statusText : e.message);
                 }
             }
         },
-        triggerCreateGroup() {
-            this.$emit('create-group');
+        async finalizeGroup() {
+            if (!this.groupName) return;
+            try {
+                const memberIds = this.selectedUsers.map(u => u.id);
+                let res = await this.$axios.post("/groups", { 
+                    name: this.groupName, 
+                    initialMembers: memberIds 
+                });
+                // Group created
+                this.viewMode = 'list';
+                this.selectedUsers = [];
+                this.groupName = "";
+                this.$emit('chat-created', res.data.groupId);
+            } catch (e) {
+                alert("Error creating group: " + e.toString());
+            }
         }
     }
 }
@@ -126,11 +176,9 @@ export default {
             </div>
             
             <div class="p-2">
-                 <!-- Search (Visual only for now or contact search?) -->
                 <input type="text" class="form-control form-control-sm bg-dark-input text-white border-0 mb-3" placeholder="Search name or number">
                 
-                <!-- Menu Items -->
-                <div class="d-flex align-items-center p-3 text-white chat-item rounded" @click="triggerCreateGroup">
+                <div class="d-flex align-items-center p-3 text-white chat-item rounded" @click="openNewGroup">
                      <div class="rounded-circle bg-success d-flex justify-content-center align-items-center me-3" style="width: 45px; height: 45px;">
                          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-users"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
                      </div>
@@ -143,6 +191,95 @@ export default {
                      </div>
                      <span>New contact</span>
                 </div>
+            </div>
+        </div>
+
+        <!-- VIEW: NEW GROUP (Member Selection) -->
+        <div v-else-if="viewMode === 'new_group'" class="d-flex flex-column h-100 position-relative">
+            <div class="p-3 bg-dark-header d-flex align-items-center gap-3">
+                 <button class="btn btn-link text-white p-0" @click="goBack">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-arrow-left"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+                 </button>
+                <h5 class="m-0 text-white">Add group members</h5>
+            </div>
+
+            <div class="p-3 border-bottom border-secondary d-flex flex-wrap gap-2 sticky-top bg-dark-list" v-if="selectedUsers.length > 0">
+                <div v-for="user in selectedUsers" :key="user.id" class="badge rounded-pill bg-dark d-flex align-items-center gap-2 p-2 border border-secondary">
+                    <div class="rounded-circle bg-secondary overflow-hidden" style="width: 24px; height: 24px;">
+                        <img v-if="user.photoUrl" :src="user.photoUrl" class="w-100 h-100" style="object-fit: cover;">
+                        <span v-else class="small">{{ user.name.charAt(0) }}</span>
+                    </div>
+                    <span>{{ user.name }}</span>
+                    <button class="btn btn-sm btn-link text-white p-0 lh-1" @click="toggleUserSelection(user)">×</button>
+                </div>
+            </div>
+
+            <div class="p-2 border-bottom border-secondary">
+                <input type="text" class="form-control form-control-sm bg-dark-input text-white border-0" placeholder="Type contact name" v-model="groupSearch">
+            </div>
+
+            <div class="flex-grow-1 overflow-auto custom-scrollbar">
+                <div v-for="user in filteredUsers" :key="user.id" class="d-flex align-items-center p-3 border-bottom border-secondary chat-item" @click="toggleUserSelection(user)">
+                    <div class="rounded-circle bg-secondary d-flex justify-content-center align-items-center me-3 text-white" style="width: 45px; height: 45px; flex-shrink: 0;">
+                        <img v-if="user.photoUrl" :src="user.photoUrl" class="w-100 h-100 rounded-circle" style="object-fit: cover;">
+                        <span v-else>{{ user.name.charAt(0).toUpperCase() }}</span>
+                    </div>
+                    <div class="flex-grow-1 text-white">{{ user.name }}</div>
+                    <div v-if="selectedUsers.find(u => u.id === user.id)" class="text-success">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-check-circle"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Floating Action Button -->
+            <button 
+                v-if="selectedUsers.length >= 2" 
+                class="btn rounded-circle p-3 position-absolute bottom-0 end-0 m-4 shadow-lg d-flex align-items-center justify-content-center" 
+                style="background-color: #00a884; width: 60px; height: 60px; z-index: 10;"
+                @click="goToGroupDetails"
+            >
+                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-arrow-right"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+            </button>
+        </div>
+
+        <!-- VIEW: GROUP DETAILS -->
+        <div v-else-if="viewMode === 'group_details'" class="d-flex flex-column h-100">
+            <div class="p-3 bg-dark-header d-flex align-items-center gap-3">
+                 <button class="btn btn-link text-white p-0" @click="goBack">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-arrow-left"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+                 </button>
+                <h5 class="m-0 text-white">New group</h5>
+            </div>
+
+            <div class="p-4 d-flex flex-column align-items-center">
+                 <!-- Group Photo Placeholder -->
+                 <div class="rounded-circle bg-secondary d-flex justify-content-center align-items-center mb-4 text-white-50 shadow-sm" style="width: 150px; height: 150px; background-color: #202c33 !important;">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="feather feather-camera"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+                 </div>
+
+                 <div class="w-100 mb-4">
+                     <label class="form-label text-secondary small">Group name</label>
+                     <input 
+                        v-model="groupName" 
+                        type="text" 
+                        class="form-control bg-dark-input text-white border-0 border-bottom border-success rounded-0 px-0 py-2" 
+                        placeholder="Group name"
+                        maxlength="20"
+                     >
+                 </div>
+
+                 <div class="w-100 text-secondary small mb-4">
+                     Provide a group subject and optional group icon
+                 </div>
+
+                 <button 
+                    class="btn btn-success rounded-circle p-3 mt-auto shadow-lg" 
+                    style="width: 60px; height: 60px; background-color: #00a884 !important;" 
+                    @click="finalizeGroup"
+                    :disabled="!groupName || groupName.length < 3"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-check"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                 </button>
             </div>
         </div>
 

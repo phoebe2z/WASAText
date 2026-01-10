@@ -35,7 +35,7 @@ func (rt *_router) createGroup(w http.ResponseWriter, r *http.Request, ps httpro
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	if len(req.InitialMembers) < 2 { // "At least 3 persons" (creator + 2 others)
+	if len(req.InitialMembers) < 2 { // At least 2 other members (3 total including creator)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}

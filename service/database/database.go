@@ -19,6 +19,7 @@ type AppDatabase interface {
 	GetUserByName(name string) (User, error)
 	SetUserName(id int64, name string) error
 	SetUserPhoto(id int64, photoURL string) error
+	ListUsers(query string) ([]User, error)
 
 	// Conversation
 	CreateConversation(name string, isGroup bool, initialMembers []int64) (Conversation, error)
