@@ -175,12 +175,12 @@ paths:
   /conversations/{conversationId}:
     parameters:
       - name: conversationId
-      in: path
-      required: true
-      description: this is the conversation id
-      schema:
-        type: integer
-        description: an incremental number e.g., /1234 for each conversation 
+        in: path
+        required: true
+        description: this is the conversation id
+        schema:
+          type: integer
+          description: an incremental number e.g., /1234 for each conversation 
           
     get:
       tags: ["conversations"]
@@ -265,12 +265,12 @@ paths:
   /messages/{messageId}:
     parameters:
       - name: messageId
-      in: path
-      required: true
-      description: this is the message id
-      schema:
-        type: integer
-        description: an incremental number 
+        in: path
+        required: true
+        description: this is the message id
+        schema:
+          type: integer
+          description: an incremental number 
           
     delete:
       tags: ["message"]
@@ -300,12 +300,12 @@ paths:
   /messages/{messageId}/forward:
     parameters:
       - name: messageId
-      in: path
-      required: true
-      description: this is the message id
-      schema:
-        type: integer
-        description: an incremental number 
+        in: path
+        required: true
+        description: this is the message id
+        schema:
+          type: integer
+          description: an incremental number 
           
     post:
       tags: ["message"]
@@ -348,12 +348,12 @@ paths:
   /messages/{messageId}/reaction:
     parameters:
       - name: messageId
-      in: path
-      required: true
-      description: this is the message id
-      schema:
-        type: integer
-        description: an incremental number 
+        in: path
+        required: true
+        description: this is the message id
+        schema:
+          type: integer
+          description: an incremental number 
           
     post:
       tags: ["reaction"]
@@ -463,12 +463,12 @@ paths:
   /groups/{groupId}/members:
     parameters:
       - name: groupId
-      in: path
-      required: true
-      description: this is the group id
-      schema:
-        type: integer
-        description: an incremental number 
+        in: path
+        required: true
+        description: this is the group id
+        schema:
+          type: integer
+          description: an incremental number 
           
     post:
       tags: ["group"]
@@ -504,12 +504,12 @@ paths:
   /groups/{groupId}/me:
     parameters:
       - name: groupId
-      in: path
-      required: true
-      description: this is the group id
-      schema:
-        type: integer
-        description: an incremental number 
+        in: path
+        required: true
+        description: this is the group id
+        schema:
+          type: integer
+          description: an incremental number 
           
     delete:
       tags: ["group"]
@@ -534,12 +534,12 @@ paths:
   /groups/{groupId}/name:
     parameters:
       - name: groupId
-      in: path
-      required: true
-      description: this is the group id
-      schema:
-        type: integer
-        description: an incremental number 
+        in: path
+        required: true
+        description: this is the group id
+        schema:
+          type: integer
+          description: an incremental number 
           
     put:
       tags: ["group"]
@@ -581,12 +581,12 @@ paths:
   /groups/{groupId}/photo:
     parameters:
       - name: groupId
-      in: path
-      required: true
-      description: this is the group id
-      schema:
-        type: integer
-        description: an incremental number 
+        in: path
+        required: true
+        description: this is the group id
+        schema:
+          type: integer
+          description: an incremental number 
           
     put:
       tags: ["group"]
