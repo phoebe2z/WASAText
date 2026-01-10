@@ -102,8 +102,12 @@ func (rt *_router) createConversation(w http.ResponseWriter, r *http.Request, ps
 		return
 	}
 
-	// Prevent self-chat? Optional. WhatsApp allows it (Message yourself).
-	// members := []int64{userId, user.ID}
+	// Prevent self-chat
+	if user.ID == userId {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "cannot chat with yourself"})
+		return
+	}
 
 	members := []int64{userId, user.ID}
 

@@ -24,7 +24,7 @@ func (db *appdbimpl) CreateConversation(name string, isGroup bool, initialMember
 		return conversation, err
 	}
 
-	// Add Participants
+	// Add Participants (Unique)
 	stmt, err := tx.Prepare("INSERT INTO participants (conversation_id, user_id) VALUES (?, ?)")
 	if err != nil {
 		tx.Rollback()
@@ -32,7 +32,12 @@ func (db *appdbimpl) CreateConversation(name string, isGroup bool, initialMember
 	}
 	defer stmt.Close()
 
+	seen := make(map[int64]bool)
 	for _, memberId := range initialMembers {
+		if seen[memberId] {
+			continue
+		}
+		seen[memberId] = true
 		_, err = stmt.Exec(id, memberId)
 		if err != nil {
 			tx.Rollback()
@@ -56,17 +61,31 @@ func (db *appdbimpl) GetConversations(userId int64) ([]Conversation, error) {
 	rows, err := db.c.Query(`
 		SELECT 
 			c.id, 
-			CASE WHEN c.is_group = 1 THEN IFNULL(c.name, '') ELSE IFNULL(u.name, '') END, 
+			CASE 
+				WHEN c.is_group = 1 THEN IFNULL(c.name, '') 
+				ELSE (
+					SELECT name FROM users WHERE id = COALESCE(
+						(SELECT user_id FROM participants WHERE conversation_id = c.id AND user_id != ? LIMIT 1),
+						?
+					)
+				)
+			END, 
 			c.is_group, 
-			CASE WHEN c.is_group = 1 THEN IFNULL(c.photo_url, '') ELSE IFNULL(u.photo_url, '') END, 
+			CASE 
+				WHEN c.is_group = 1 THEN IFNULL(c.photo_url, '') 
+				ELSE (
+					SELECT IFNULL(photo_url, '') FROM users WHERE id = COALESCE(
+						(SELECT user_id FROM participants WHERE conversation_id = c.id AND user_id != ? LIMIT 1),
+						?
+					)
+				)
+			END, 
 			c.last_message_at
 		FROM conversations c
 		JOIN participants p_me ON c.id = p_me.conversation_id
-		LEFT JOIN participants p_other ON c.id = p_other.conversation_id AND p_other.user_id != p_me.user_id
-		LEFT JOIN users u ON p_other.user_id = u.id
 		WHERE p_me.user_id = ?
 		ORDER BY c.last_message_at DESC
-	`, userId)
+	`, userId, userId, userId, userId, userId)
 	if err != nil {
 		return nil, err
 	}
