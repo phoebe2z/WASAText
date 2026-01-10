@@ -30,6 +30,8 @@ export default {
             showForwardModal: false,
             messageToForward: null,
             forwardTargets: [], // selected conversation Ids
+            
+            pollInterval: null
         }
     },
     computed: {
@@ -188,7 +190,7 @@ export default {
         },
         async addMember(groupId, userIds) {
             try {
-                await this.$axios.put("/groups/" + groupId + "/member", { userIds });
+                await this.$axios.post("/groups/" + groupId + "/members", { userIds });
                 alert("Members added!");
             } catch (e) {
                 alert(e.toString());
@@ -196,7 +198,7 @@ export default {
         },
         async leaveGroup(groupId) {
              try {
-                await this.$axios.delete("/groups/" + groupId + "/member");
+                await this.$axios.delete("/groups/" + groupId + "/me");
                 this.activeConversationId = null;
                 this.refreshConversations();
             } catch (e) {
@@ -207,7 +209,7 @@ export default {
         // --- Reactions & Forwarding ---
         async reactMessage(msgId, emoticon) {
             try {
-                await this.$axios.post("/messages/" + msgId + "/comment", { emoticon }); // "Comment" = Reaction
+                await this.$axios.post("/messages/" + msgId + "/reaction", { emoticon }); // "Comment" = Reaction
                 this.openConversation(this.activeConversationId); // Refresh to show
             } catch (e) {
                console.error(e);
@@ -216,7 +218,7 @@ export default {
         async unreactMessage(msgId, userId) {
             if (parseInt(this.userId) !== parseInt(userId)) return; // Can only remove own
             try {
-                await this.$axios.delete("/messages/" + msgId + "/comment");
+                await this.$axios.delete("/messages/" + msgId + "/reaction");
                 this.openConversation(this.activeConversationId);
             } catch (e) {
                console.error(e);
@@ -261,16 +263,23 @@ export default {
         this.refreshConversations();
         this.fetchUserProfile();
         
-        setInterval(() => {
+        this.pollInterval = setInterval(() => {
             this.refreshConversations();
             if (this.activeConversationId) {
                  this.$axios.get("/conversations/" + this.activeConversationId).then(res => {
-                     const fresh = res.data.reverse();
-                     // Simple check to avoid flicker, or just replace
-                     this.messages = fresh;
-                 }).catch(()=>{});
+                     this.messages = res.data.reverse();
+                 }).catch(err => {
+                     if (err.response && err.response.status === 404) {
+                         // Selection is gone (e.g. left group or deleted)
+                         this.activeConversationId = null;
+                         this.messages = [];
+                     }
+                 });
             }
         }, 3000);
+    },
+    beforeUnmount() {
+        if (this.pollInterval) clearInterval(this.pollInterval);
     }
 }
 </script>

@@ -6,7 +6,8 @@ export default {
         return {
             newMessage: "",
             commonEmojis: ["👍", "❤️", "😂", "😮", "😢", "😡"],
-            showReactionFor: null
+            showReactionFor: null,
+            showEmojiPicker: false
         }
     },
     methods: {
@@ -14,6 +15,11 @@ export default {
             if (!this.newMessage.trim()) return;
             this.$emit('send-message', this.newMessage);
             this.newMessage = "";
+            this.showEmojiPicker = false;
+        },
+        addEmoji(emoji) {
+            this.newMessage += emoji;
+            this.showEmojiPicker = false;
         },
         toggleReaction(msgId) {
              if (this.showReactionFor === msgId) {
@@ -75,11 +81,11 @@ export default {
 
         <!-- Messages Area -->
         <div class="flex-grow-1 overflow-auto p-4 custom-scrollbar position-relative" ref="msgContainer">
-             <div v-for="msg in messages" :key="msg.id" class="d-flex flex-column mb-3" :class="{ 'align-items-end': msg.senderName === currentUser, 'align-items-start': msg.senderName !== currentUser }">
+             <div v-for="msg in messages" :key="msg.id" class="d-flex flex-column mb-3" :class="{ 'align-items-end': parseInt(msg.senderId) === parseInt(userId), 'align-items-start': parseInt(msg.senderId) !== parseInt(userId) }">
                 <!-- Message Bubble -->
-                <div class="message-bubble p-2 rounded-3 shadow-sm position-relative parent-hover-trigger" :class="{ 'message-out': msg.senderName === currentUser, 'message-in': msg.senderName !== currentUser }">
+                <div class="message-bubble p-2 rounded-3 shadow-sm position-relative parent-hover-trigger" :class="{ 'message-out': parseInt(msg.senderId) === parseInt(userId), 'message-in': parseInt(msg.senderId) !== parseInt(userId) }">
                      <!-- Sender Name (if Group and not me) -->
-                     <small v-if="conversation.isGroup && msg.senderName !== currentUser" class="text-warning fw-bold d-block mb-1" style="font-size: 0.75rem;">{{ msg.senderName }}</small>
+                     <small v-if="conversation.isGroup && parseInt(msg.senderId) !== parseInt(userId)" class="text-warning fw-bold d-block mb-1" style="font-size: 0.75rem;">{{ msg.senderName || ('User ' + msg.senderId) }}</small>
                      
                      <div class="text-white message-text">{{ msg.content }}</div>
                      
@@ -121,18 +127,21 @@ export default {
 
         <!-- Input Area -->
         <div class="p-2 bg-dark-header d-flex align-items-center gap-2">
-             <button class="btn btn-link text-secondary p-2">
-                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-smile"><circle cx="12" cy="12" r="10"></circle><path d="M8 14s1.5 2 4 2 4-2 4-2"></path><line x1="9" y1="9" x2="9.01" y2="9"></line><line x1="15" y1="9" x2="15.01" y2="9"></line></svg>
-             </button>
-             <button class="btn btn-link text-secondary p-2">
-                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-plus"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-             </button>
+             <!-- Emoji Picker Container -->
+             <div class="position-relative">
+                <button class="btn btn-link text-secondary p-2" @click="showEmojiPicker = !showEmojiPicker">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-smile"><circle cx="12" cy="12" r="10"></circle><path d="M8 14s1.5 2 4 2 4-2 4-2"></path><line x1="9" y1="9" x2="9.01" y2="9"></line><line x1="15" y1="9" x2="15.01" y2="9"></line></svg>
+                </button>
+                <!-- Emoji Picker Popover -->
+                <div v-if="showEmojiPicker" class="position-absolute bottom-100 start-0 bg-dark border border-secondary rounded shadow p-2 d-flex flex-wrap gap-2" style="z-index: 1000; width: 180px;">
+                    <button v-for="emoji in commonEmojis" :key="emoji" class="btn btn-sm btn-link text-decoration-none p-1 fs-4" @click="addEmoji(emoji)">{{ emoji }}</button>
+                </div>
+             </div>
              
              <input type="text" class="form-control bg-dark-input text-white border-0 rounded-3 py-2" placeholder="Type a message" v-model="newMessage" @keyup.enter="sendMessage">
              
-             <button class="btn btn-link text-secondary p-2" @click="sendMessage">
-                  <svg v-if="newMessage.trim()" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-send"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
-                  <svg v-else xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-mic"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+             <button class="btn btn-link text-secondary p-2" @click="sendMessage" :disabled="!newMessage.trim()">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-send"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
              </button>
         </div>
     </div>
