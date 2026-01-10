@@ -2,8 +2,14 @@ package api
 
 import (
 	"encoding/json"
+	"fmt"
+	"io"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strconv"
+	"strings"
+	"time"
 
 	"github.com/julienschmidt/httprouter"
 )
@@ -170,6 +176,24 @@ func (rt *_router) setGroupPhoto(w http.ResponseWriter, r *http.Request, ps http
 		return
 	}
 
+	// Check if JSON
+	if strings.HasPrefix(r.Header.Get("Content-Type"), "application/json") {
+		var req struct {
+			PhotoURL string `json:"photoUrl"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		err = rt.db.SetGroupPhoto(groupId, req.PhotoURL)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
 	// Multipart
 	err = r.ParseMultipartForm(10 << 20)
 	if err != nil {
@@ -184,7 +208,22 @@ func (rt *_router) setGroupPhoto(w http.ResponseWriter, r *http.Request, ps http
 	}
 	defer file.Close()
 
-	photoURL := "http://localhost:8080/static/" + handler.Filename
+	// Save file
+	data, err := io.ReadAll(file)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	filename := fmt.Sprintf("group-%d-%d%s", groupId, time.Now().Unix(), filepath.Ext(handler.Filename))
+	err = os.WriteFile(filepath.Join("static", filename), data, 0644)
+	if err != nil {
+		rt.baseLogger.WithError(err).Error("error saving file")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	photoURL := "/static/" + filename
 
 	err = rt.db.SetGroupPhoto(groupId, photoURL)
 	if err != nil {

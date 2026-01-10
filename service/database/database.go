@@ -123,14 +123,14 @@ func (db *appdbimpl) Ping() error {
 type User struct {
 	ID       int64  `json:"id"`
 	Name     string `json:"name"`
-	PhotoURL string `json:"photoURL"`
+	PhotoURL string `json:"photoUrl"`
 }
 
 type Conversation struct {
 	ID            int64     `json:"conversationId"`
 	Name          string    `json:"name"`
 	IsGroup       bool      `json:"isGroup"`
-	PhotoURL      string    `json:"photoURL"`
+	PhotoURL      string    `json:"photoUrl"`
 	LastMessageAt time.Time `json:"latestMessageTime"`
 }
 

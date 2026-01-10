@@ -15,6 +15,7 @@ export default {
             errormsg: null,
             userId: localStorage.getItem("user_id"),
             username: localStorage.getItem("username"),
+            photoUrl: null,
             
             // Layout State
             activeTab: 'chat', // 'chat', 'profile'
@@ -37,10 +38,23 @@ export default {
         }
     },
     methods: {
+        async fetchUserProfile() {
+            try {
+                let response = await this.$axios.get("/user/me");
+                this.username = response.data.name;
+                this.photoUrl = this.resolvePhotoUrl(response.data.photoUrl);
+                if (this.username) localStorage.setItem("username", this.username);
+            } catch (e) {
+                console.error("Error fetching profile:", e);
+            }
+        },
         async refreshConversations() {
             try {
                 let response = await this.$axios.get("/conversations");
-                this.conversations = response.data;
+                this.conversations = response.data.map(c => ({
+                    ...c,
+                    photoUrl: this.resolvePhotoUrl(c.photoUrl)
+                }));
             } catch (e) {
                 console.error(e);
             }
@@ -88,13 +102,27 @@ export default {
                 alert(e.toString());
             }
         },
-        async updateProfilePhoto(url) {
+        async updateProfilePhoto(payload) {
              try {
-                await this.$axios.put("/user/photo", { photoUrl: url });
-                alert("Photo updated");
+                let res;
+                if (payload instanceof File) {
+                    const formData = new FormData();
+                    formData.append("newPhoto", payload);
+                    res = await this.$axios.put("/user/photo", formData, {
+                        headers: { 'Content-Type': 'multipart/form-data' }
+                    });
+                    alert("Photo updated via File Upload!");
+                } else {
+                    res = await this.$axios.put("/user/photo", { photoUrl: payload });
+                    alert("Photo updated via URL!");
+                }
+                
+                if (res && res.data && res.data.photoUrl) {
+                    this.photoUrl = this.resolvePhotoUrl(res.data.photoUrl);
+                }
              } catch(e) {
                  console.error(e);
-                 alert("Error updating photo (check backend support): " + e.toString());
+                 alert("Error updating photo: " + e.toString());
              }
         },
         async createGroup() {
@@ -126,6 +154,10 @@ export default {
         },
         
         // --- Group Management ---
+        onChatCreated(conversationId) {
+            this.refreshConversations();
+            this.openConversation(conversationId);
+        },
         async setGroupName(groupId, newName) {
             try {
                 await this.$axios.put("/groups/" + groupId + "/name", { newName });
@@ -135,19 +167,24 @@ export default {
                 alert(e.toString());
             }
         },
-        async setGroupPhoto(groupId, url) {
-             // Backend expects Multipart form data or maybe JSON?
-             // My implementation (groups.go) expects multipart "photo".
-             // But here I'm getting a URL string from prompt.
-             // If I need to support URL setting, I might need to change backend or fake it.
-             // Wait, the Prompt said "URL". But `groups.go` `setGroupPhoto` reads `r.FormFile("photo")`.
-             // This mismatch means uploading via URL string won't work with that endpoint unless I change it or upload file.
-             // For now, I will warn user or try to fetch and upload if I had time, but simpler:
-             // Assume backend MIGHT accept JSON if I changed it? No, I viewed the code.
-             // WORKAROUND: I will just alert that only File Upload is supported by backend for now, or incomplete implementation in UI for file upload.
-             // OR, better, since I can edit frontend, I can make a file input. But prompt is easier.
-             // Let's just try to send JSON and see if backend accepts it? No, `ParseMultipartForm` will fail or find nothing.
-             alert("Backend requires File Upload. URL setting not implemented in this UI demo.");
+        async setGroupPhoto(groupId, payload) {
+             try {
+                if (payload instanceof File) {
+                    const formData = new FormData();
+                    formData.append("photo", payload);
+                    await this.$axios.put("/groups/" + groupId + "/photo", formData, {
+                        headers: { 'Content-Type': 'multipart/form-data' }
+                    });
+                    this.refreshConversations();
+                    alert("Group photo updated!");
+                } else {
+                    await this.$axios.put("/groups/" + groupId + "/photo", { photoUrl: payload });
+                    this.refreshConversations();
+                }
+             } catch(e) {
+                 console.error(e);
+                 alert("Error updating group photo: " + e.toString());
+             }
         },
         async addMember(groupId, userIds) {
             try {
@@ -201,7 +238,19 @@ export default {
             } catch (e) {
                 alert(e.toString());
             }
-        }
+        },
+        resolvePhotoUrl(url) {
+            if (!url) return null;
+            if (url.startsWith("http")) return url;
+            if (url.startsWith("/")) {
+                // If baseURL ends with / and url starts with /, strip one?
+                // axios baseURL usually doesn't end with slash if configured as "http://localhost:3000".
+                // But url is "/static/...".
+                const base = this.$axios.defaults.baseURL || "";
+                return base + url;
+            }
+            return url;
+        },
     },
     mounted() {
         if (!this.userId) {
@@ -210,6 +259,7 @@ export default {
         }
         this.$axios.defaults.headers.common['Authorization'] = 'Bearer ' + this.userId;
         this.refreshConversations();
+        this.fetchUserProfile();
         
         setInterval(() => {
             this.refreshConversations();
@@ -240,11 +290,13 @@ export default {
                 :activeId="activeConversationId" 
                 @select-chat="openConversation"
                 @create-group="createGroup"
+                @chat-created="onChatCreated"
             />
             <ProfilePanel 
                 v-if="activeTab === 'profile'"
                 :username="username"
                 :userId="userId"
+                :photoUrl="photoUrl"
                 @update-name="updateProfileName"
                 @update-photo="updateProfilePhoto"
                 @logout="logout"

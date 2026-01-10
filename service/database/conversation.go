@@ -54,10 +54,17 @@ func (db *appdbimpl) CreateConversation(name string, isGroup bool, initialMember
 
 func (db *appdbimpl) GetConversations(userId int64) ([]Conversation, error) {
 	rows, err := db.c.Query(`
-		SELECT c.id, IFNULL(c.name, ''), c.is_group, IFNULL(c.photo_url, ''), c.last_message_at
+		SELECT 
+			c.id, 
+			CASE WHEN c.is_group = 1 THEN IFNULL(c.name, '') ELSE IFNULL(u.name, '') END, 
+			c.is_group, 
+			CASE WHEN c.is_group = 1 THEN IFNULL(c.photo_url, '') ELSE IFNULL(u.photo_url, '') END, 
+			c.last_message_at
 		FROM conversations c
-		JOIN participants p ON c.id = p.conversation_id
-		WHERE p.user_id = ?
+		JOIN participants p_me ON c.id = p_me.conversation_id
+		LEFT JOIN participants p_other ON c.id = p_other.conversation_id AND p_other.user_id != p_me.user_id
+		LEFT JOIN users u ON p_other.user_id = u.id
+		WHERE p_me.user_id = ?
 		ORDER BY c.last_message_at DESC
 	`, userId)
 	if err != nil {

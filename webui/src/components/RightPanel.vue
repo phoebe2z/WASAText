@@ -25,10 +25,13 @@ export default {
             this.isEditingName = false;
         },
         openPhotoUpload() {
-             const url = prompt("Enter new Group Photo URL:");
-             if (url) {
-                 this.$emit('set-group-photo', this.conversation.conversationId, url);
-             }
+             this.$refs.fileInput.click();
+        },
+        handleFileChange(event) {
+            const file = event.target.files[0];
+            if (file) {
+                 this.$emit('set-group-photo', this.conversation.conversationId, file);
+            }
         },
         addMember() {
             if (!this.newMemberId) return;
@@ -51,6 +54,7 @@ export default {
 
 <template>
     <div class="d-flex flex-column h-100 bg-dark-list border-start border-secondary" style="width: 300px;">
+        <input type="file" ref="fileInput" class="d-none" accept="image/*" @change="handleFileChange">
         <!-- Header -->
         <div class="p-3 bg-dark-header d-flex align-items-center">
             <button class="btn btn-link text-secondary p-0 me-3" @click="$emit('close')">
@@ -68,7 +72,7 @@ export default {
                         <span v-else class="text-white fs-1">{{ (conversation.name || 'C').charAt(0).toUpperCase() }}</span>
                     </div>
                      <div v-if="conversation.isGroup" class="position-absolute top-0 start-0 w-100 h-100 rounded-circle d-flex align-items-center justify-content-center bg-dark bg-opacity-50 text-white opacity-0 hover-opacity-100 transition">
-                        <div class="text-center small">Change<br>Photo</div>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-camera"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
                     </div>
                 </div>
                 

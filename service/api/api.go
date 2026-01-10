@@ -89,7 +89,9 @@ func New(cfg Config) (Router, error) {
 	router.POST("/session", r.doLogin)
 	router.PUT("/user/name", r.setMyUserName)
 	router.PUT("/user/photo", r.setMyPhoto)
+	router.GET("/user/me", r.getMyProfile)
 
+	router.POST("/conversations", r.createConversation)
 	router.GET("/conversations", r.getMyConversations)
 	router.GET("/conversations/:conversationId", r.getConversation)
 
@@ -104,6 +106,9 @@ func New(cfg Config) (Router, error) {
 	router.DELETE("/groups/:groupId/me", r.leaveGroup)
 	router.PUT("/groups/:groupId/name", r.setGroupName)
 	router.PUT("/groups/:groupId/photo", r.setGroupPhoto)
+
+	// Serve static files
+	router.ServeFiles("/static/*filepath", http.Dir("./static"))
 
 	return r, nil
 }

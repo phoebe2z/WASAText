@@ -2,9 +2,14 @@ package api
 
 import (
 	"encoding/json"
+	"fmt"
+	"io"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/julienschmidt/httprouter"
 )
@@ -66,21 +71,31 @@ func (rt *_router) setMyPhoto(w http.ResponseWriter, r *http.Request, ps httprou
 		return
 	}
 
-	// Handle Multipart upload
-	// For simplicity in this homework context, I'm assuming we skip actual file storage
-	// implementation details (like writing to disk/S3) unless explicitly asked.
-	// However, the DB needs a string. I'll mock saving and return success.
-	// Or actually check the spec.
-	// Spec says: "multipart/form-data ... file".
+	// Check if JSON
+	if strings.HasPrefix(r.Header.Get("Content-Type"), "application/json") {
+		var req struct {
+			PhotoURL string `json:"photoUrl"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		err = rt.db.SetUserPhoto(userId, req.PhotoURL)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		return
+	}
 
-	// ParseMultipartForm
-	err = r.ParseMultipartForm(10 << 20) // 10 MB
+	// Multipart
+	err = r.ParseMultipartForm(10 << 20)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-	// retrieving the file from request
 	file, handler, err := r.FormFile("newPhoto")
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
@@ -88,9 +103,22 @@ func (rt *_router) setMyPhoto(w http.ResponseWriter, r *http.Request, ps httprou
 	}
 	defer file.Close()
 
-	// Mock: Just using filename as URL for now, or generating a fake one.
-	// Real implementation would save logic.
-	photoURL := "http://localhost:8080/static/" + handler.Filename
+	// Save file
+	data, err := io.ReadAll(file)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	filename := fmt.Sprintf("user-%d-%d%s", userId, time.Now().Unix(), filepath.Ext(handler.Filename))
+	err = os.WriteFile(filepath.Join("static", filename), data, 0644)
+	if err != nil {
+		rt.baseLogger.WithError(err).Error("error saving file")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	photoURL := "/static/" + filename
 
 	err = rt.db.SetUserPhoto(userId, photoURL)
 	if err != nil {
@@ -98,5 +126,24 @@ func (rt *_router) setMyPhoto(w http.ResponseWriter, r *http.Request, ps httprou
 		return
 	}
 
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{"photoUrl": photoURL})
+}
+
+func (rt *_router) getMyProfile(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	userId, err := extractBearer(r)
+	if err != nil {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	user, err := rt.db.GetUser(userId)
+	if err != nil {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(user)
 }

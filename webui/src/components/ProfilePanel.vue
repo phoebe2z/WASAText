@@ -1,6 +1,6 @@
 <script>
 export default {
-    props: ['username', 'userId'],
+    props: ['username', 'userId', 'photoUrl'],
     emits: ['update-name', 'update-photo', 'logout'],
     data() {
         return {
@@ -21,12 +21,13 @@ export default {
             this.isEditingName = false;
         },
         openPhotoUpload() {
-             // For now just a prompt or simpler mechanism as we don't have a full file upload UI in the prompt
-             // Using a prompt for URL or simulated upload
-             const url = prompt("Enter photo URL:");
-             if (url) {
-                 this.$emit('update-photo', url);
-             }
+             this.$refs.fileInput.click();
+        },
+        handleFileChange(event) {
+            const file = event.target.files[0];
+            if (file) {
+                this.$emit('update-photo', file);
+            }
         }
     }
 }
@@ -34,6 +35,7 @@ export default {
 
 <template>
     <div class="d-flex flex-column h-100 bg-dark-list border-end border-secondary">
+        <input type="file" ref="fileInput" class="d-none" accept="image/*" @change="handleFileChange">
         <!-- Header -->
         <div class="p-3 bg-dark-header">
             <h5 class="m-0 text-white">Profile</h5>
@@ -45,11 +47,11 @@ export default {
                 <div class="position-relative" style="width: 150px; height: 150px; cursor: pointer;" @click="openPhotoUpload" title="Change Photo">
                     <div class="w-100 h-100 rounded-circle bg-secondary d-flex align-items-center justify-content-center overflow-hidden">
                         <!-- Placeholder or actual image if we had one -->
-                        <span class="text-white fs-1">{{ username ? username.charAt(0).toUpperCase() : '?' }}</span>
+                        <img v-if="photoUrl" :src="photoUrl" class="w-100 h-100" style="object-fit: cover;">
+                        <span v-else class="text-white fs-1">{{ username ? username.charAt(0).toUpperCase() : '?' }}</span>
                     </div>
                      <div class="position-absolute top-0 start-0 w-100 h-100 rounded-circle d-flex align-items-center justify-content-center bg-dark bg-opacity-50 text-white opacity-0 hover-opacity-100 transition">
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-camera"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
-                        <div class="text-center small mt-4 ms-2"><br>Change<br>Photo</div>
                     </div>
                 </div>
             </div>

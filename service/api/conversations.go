@@ -75,5 +75,46 @@ func (rt *_router) getConversation(w http.ResponseWriter, r *http.Request, ps ht
 		w.Write([]byte("[]"))
 		return
 	}
+
 	json.NewEncoder(w).Encode(messages)
+}
+
+func (rt *_router) createConversation(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	userId, err := extractBearer(r)
+	if err != nil {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	var req struct {
+		RecipientName string `json:"recipientName"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	// Look up user by name
+	user, err := rt.db.GetUserByName(req.RecipientName)
+	if err != nil {
+		// Assume error means not found (or check specifics if possible, but for now 404 is safe for user not found)
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	// Prevent self-chat? Optional. WhatsApp allows it (Message yourself).
+	// members := []int64{userId, user.ID}
+
+	members := []int64{userId, user.ID}
+
+	// Create conversation
+	conversation, err := rt.db.CreateConversation("", false, members)
+	if err != nil {
+		rt.baseLogger.WithError(err).Error("error creating conversation")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(conversation)
 }
