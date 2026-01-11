@@ -235,7 +235,7 @@ paths:
                     - text
                     - photo
                   description: Type pf content being sent
-                replytoId:
+                replyToId:
                   type: integer
                   nullable: true
                   description: Optional ID of the message being replied to
