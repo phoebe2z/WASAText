@@ -2,7 +2,7 @@ package database
 
 func (db *appdbimpl) ListUsers(query string) ([]User, error) {
 	var users []User
-	sqlQuery := "SELECT id, name, photo_url FROM users"
+	sqlQuery := "SELECT id, name, IFNULL(photo_url, '') FROM users"
 	var args []interface{}
 
 	if query != "" {

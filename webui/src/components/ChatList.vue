@@ -1,6 +1,6 @@
 <script>
 export default {
-    props: ['conversations', 'activeId'],
+    props: ['conversations', 'activeId', 'currentUserId'],
     emits: ['select-chat', 'create-group', 'create-dm'],
     data() {
         return {
@@ -28,7 +28,10 @@ export default {
         },
         filteredUsers() {
             const query = this.groupSearch.toLowerCase();
-            return this.allUsers.filter(u => u.name.toLowerCase().includes(query));
+            return this.allUsers.filter(u => 
+                u.name.toLowerCase().includes(query) && 
+                u.id.toString() !== this.currentUserId?.toString()
+            );
         }
     },
     methods: {
@@ -109,7 +112,16 @@ export default {
             } catch (e) {
                 alert("Error creating group: " + e.toString());
             }
-        }
+        },
+        resolvePhotoUrl(url) {
+            if (!url) return null;
+            if (url.startsWith("http")) return url;
+            if (url.startsWith("/")) {
+                const base = this.$axios.defaults.baseURL || "";
+                return base + url;
+            }
+            return url;
+        },
     }
 }
 </script>
@@ -206,7 +218,7 @@ export default {
             <div class="p-3 border-bottom border-secondary d-flex flex-wrap gap-2 sticky-top bg-dark-list" v-if="selectedUsers.length > 0">
                 <div v-for="user in selectedUsers" :key="user.id" class="badge rounded-pill bg-dark d-flex align-items-center gap-2 p-2 border border-secondary">
                     <div class="rounded-circle bg-secondary overflow-hidden" style="width: 24px; height: 24px;">
-                        <img v-if="user.photoUrl" :src="user.photoUrl" class="w-100 h-100" style="object-fit: cover;">
+                        <img v-if="user.photoUrl" :src="resolvePhotoUrl(user.photoUrl)" class="w-100 h-100" style="object-fit: cover;">
                         <span v-else class="small">{{ user.name.charAt(0) }}</span>
                     </div>
                     <span>{{ user.name }}</span>
@@ -221,7 +233,7 @@ export default {
             <div class="flex-grow-1 overflow-auto custom-scrollbar">
                 <div v-for="user in filteredUsers" :key="user.id" class="d-flex align-items-center p-3 border-bottom border-secondary chat-item" @click="toggleUserSelection(user)">
                     <div class="rounded-circle bg-secondary d-flex justify-content-center align-items-center me-3 text-white" style="width: 45px; height: 45px; flex-shrink: 0;">
-                        <img v-if="user.photoUrl" :src="user.photoUrl" class="w-100 h-100 rounded-circle" style="object-fit: cover;">
+                        <img v-if="user.photoUrl" :src="resolvePhotoUrl(user.photoUrl)" class="w-100 h-100 rounded-circle" style="object-fit: cover;">
                         <span v-else>{{ user.name.charAt(0).toUpperCase() }}</span>
                     </div>
                     <div class="flex-grow-1 text-white">{{ user.name }}</div>

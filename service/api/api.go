@@ -103,6 +103,7 @@ func New(cfg Config) (Router, error) {
 	router.DELETE("/messages/:messageId/reaction", r.uncommentMessage)
 
 	router.POST("/groups", r.createGroup)
+	router.GET("/groups/:groupId/members", r.getGroupMembers)
 	router.POST("/groups/:groupId/members", r.addToGroup)
 	router.DELETE("/groups/:groupId/me", r.leaveGroup)
 	router.PUT("/groups/:groupId/name", r.setGroupName)

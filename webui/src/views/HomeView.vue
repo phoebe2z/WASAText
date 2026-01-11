@@ -297,6 +297,7 @@ export default {
                 v-if="activeTab === 'chat'" 
                 :conversations="conversations" 
                 :activeId="activeConversationId" 
+                :currentUserId="userId"
                 @select-chat="openConversation"
                 @create-group="createGroup"
                 @chat-created="onChatCreated"

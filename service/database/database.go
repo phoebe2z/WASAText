@@ -33,6 +33,7 @@ type AppDatabase interface {
 	RemoveMember(groupId int64, userId int64) error
 	IsUserInConversation(conversationId int64, userId int64) (bool, error)
 	GetConversationMembers(conversationId int64) ([]int64, error)
+	GetConversationMembersDetailed(conversationId int64) ([]User, error)
 
 	// Message
 	SendMessage(conversationId int64, senderId int64, content string, contentType string, replyToId *int64) (Message, error)

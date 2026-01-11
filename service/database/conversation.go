@@ -134,3 +134,26 @@ func (db *appdbimpl) GetConversationMembers(conversationId int64) ([]int64, erro
 	}
 	return members, rows.Err()
 }
+
+func (db *appdbimpl) GetConversationMembersDetailed(conversationId int64) ([]User, error) {
+	rows, err := db.c.Query(`
+		SELECT u.id, u.name, IFNULL(u.photo_url, '')
+		FROM users u
+		JOIN participants p ON u.id = p.user_id
+		WHERE p.conversation_id = ?
+	`, conversationId)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var members []User
+	for rows.Next() {
+		var u User
+		if err := rows.Scan(&u.ID, &u.Name, &u.PhotoURL); err != nil {
+			return nil, err
+		}
+		members = append(members, u)
+	}
+	return members, rows.Err()
+}

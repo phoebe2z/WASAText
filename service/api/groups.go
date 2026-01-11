@@ -14,6 +14,41 @@ import (
 	"github.com/julienschmidt/httprouter"
 )
 
+func (rt *_router) getGroupMembers(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	userId, err := extractBearer(r)
+	if err != nil {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	groupId, err := strconv.ParseInt(ps.ByName("groupId"), 10, 64)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	// Check if user is in group
+	in, err := rt.db.IsUserInConversation(groupId, userId)
+	if err != nil || !in {
+		w.WriteHeader(http.StatusForbidden)
+		return
+	}
+
+	members, err := rt.db.GetConversationMembersDetailed(groupId)
+	if err != nil {
+		rt.baseLogger.WithError(err).Error("error getting group members")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	if members == nil {
+		w.Write([]byte("[]"))
+		return
+	}
+	json.NewEncoder(w).Encode(members)
+}
+
 func (rt *_router) createGroup(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	userId, err := extractBearer(r)
 	if err != nil {
