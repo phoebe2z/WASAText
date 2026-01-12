@@ -92,6 +92,7 @@ func New(db *sql.DB) (AppDatabase, error) {
 			reply_to_id INTEGER,
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 			status INTEGER DEFAULT 0,
+			is_deleted BOOLEAN NOT NULL DEFAULT 0,
 			FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE,
 			FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE
 		);`,
@@ -111,6 +112,10 @@ func New(db *sql.DB) (AppDatabase, error) {
 			return nil, fmt.Errorf("error creating database structure: %w", err)
 		}
 	}
+
+	// Migrations
+	_, _ = db.Exec("ALTER TABLE messages ADD COLUMN is_deleted BOOLEAN NOT NULL DEFAULT 0")
+	_, _ = db.Exec("ALTER TABLE conversations ADD COLUMN last_message_at DATETIME")
 
 	// Cleanup duplicate 1-on-1 conversations
 	_, _ = db.Exec(`
@@ -149,13 +154,16 @@ type User struct {
 }
 
 type Conversation struct {
-	ID                   int64     `json:"conversationId"`
-	Name                 string    `json:"name"`
-	IsGroup              bool      `json:"isGroup"`
-	PhotoURL             string    `json:"photoUrl"`
-	LastMessageAt        time.Time `json:"latestMessageTime"`
-	LatestMessagePreview string    `json:"latestMessagePreview"`
-	UnreadCount          int       `json:"unreadCount"`
+	ID                    int64     `json:"conversationId"`
+	Name                  string    `json:"name"`
+	IsGroup               bool      `json:"isGroup"`
+	PhotoURL              string    `json:"photoUrl"`
+	LastMessageAt         time.Time `json:"latestMessageTime"`
+	LatestMessagePreview  string    `json:"latestMessagePreview"`
+	LatestMessageStatus   int       `json:"latestMessageStatus"`
+	LatestMessageSenderId int64     `json:"latestMessageSenderId"`
+	LatestMessageDeleted  bool      `json:"latestMessageDeleted"`
+	UnreadCount           int       `json:"unreadCount"`
 }
 
 type Message struct {
@@ -168,6 +176,7 @@ type Message struct {
 	ReplyToId      *int64     `json:"replyToId"`
 	TimeStamp      time.Time  `json:"timeStamp"`
 	Status         int        `json:"status"`
+	IsDeleted      bool       `json:"isDeleted"`
 	Reactions      []Reaction `json:"reactions"`
 }
 

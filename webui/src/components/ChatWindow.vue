@@ -137,10 +137,16 @@ export default {
                          <div class="text-white-50 text-truncate" style="max-height: 40px;">{{ getReplyPreview(msg.replyToId) }}</div>
                      </div>
 
-                     <div v-if="msg.contentType === 'photo'" class="mb-2">
-                         <img :src="msg.content" class="rounded w-100 shadow-sm" style="max-height: 300px; object-fit: contain; cursor: pointer;" @click="openImage(msg.content)">
+                     <div v-if="msg.isDeleted" class="text-white-50 fst-italic d-flex align-items-center gap-2">
+                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-slash"><circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg>
+                         <span>This Message has been deleted</span>
                      </div>
-                     <div v-else class="text-white message-text">{{ msg.content }}</div>
+                     <template v-else>
+                         <div v-if="msg.contentType === 'photo'" class="mb-2">
+                             <img :src="msg.content" class="rounded w-100 shadow-sm" style="max-height: 300px; object-fit: contain; cursor: pointer;" @click="openImage(msg.content)">
+                         </div>
+                         <div v-else class="text-white message-text">{{ msg.content }}</div>
+                     </template>
                      
                      <!-- Reactions Display -->
                      <div v-if="msg.reactions && msg.reactions.length > 0" class="d-flex flex-wrap gap-1 mt-1">

@@ -122,6 +122,11 @@ export default {
             }
             return url;
         },
+        formatTime(timeStr) {
+            if (!timeStr) return "";
+            const date = new Date(timeStr);
+            return date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true }).toLowerCase();
+        },
     }
 }
 </script>
@@ -166,10 +171,21 @@ export default {
                     <div class="flex-grow-1 min-w-0">
                         <div class="d-flex justify-content-between align-items-baseline mb-1">
                             <h6 class="mb-0 text-white text-truncate">{{ c.name || (c.isGroup ? 'Group ' + c.conversationId : 'Chat ' + c.conversationId) }}</h6>
-                            <small class="text-secondary" style="font-size: 0.75rem;">{{ c.lastMessageTime ? new Date(c.lastMessageTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '' }}</small>
+                            <small class="text-secondary" style="font-size: 0.75rem;">{{ formatTime(c.latestMessageTime) }}</small>
                         </div>
                         <div class="d-flex justify-content-between align-items-center">
-                            <small class="text-secondary text-truncate d-block" style="max-width: 90%;">{{ c.latestMessagePreview }}</small>
+                            <div class="d-flex align-items-center gap-1 overflow-hidden" style="max-width: 90%;">
+                                <div v-if="parseInt(c.latestMessageSenderId) === parseInt(currentUserId)" class="d-flex align-items-center flex-shrink-0">
+                                     <svg v-if="c.latestMessageStatus === 0" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#8696a0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                     <svg v-else-if="c.latestMessageStatus === 1" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8696a0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 12 12 17 22 7"></polyline><polyline points="2 12 7 17 17 7"></polyline></svg>
+                                     <svg v-else xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#53bdeb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 12 12 17 22 7"></polyline><polyline points="2 12 7 17 17 7"></polyline></svg>
+                                </div>
+                                <small v-if="c.latestMessageDeleted" class="text-secondary text-truncate d-block fst-italic">
+                                     <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-slash me-1"><circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg>
+                                     This Message has been deleted
+                                </small>
+                                <small v-else class="text-secondary text-truncate d-block">{{ c.latestMessagePreview }}</small>
+                            </div>
                             <span v-if="c.unreadCount > 0" class="badge rounded-pill bg-success">{{ c.unreadCount }}</span>
                         </div>
                     </div>

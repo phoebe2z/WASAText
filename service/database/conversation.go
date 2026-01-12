@@ -83,6 +83,9 @@ func (db *appdbimpl) GetConversations(userId int64) ([]Conversation, error) {
 			END, 
 			c.last_message_at,
 			(SELECT content FROM messages WHERE conversation_id = c.id ORDER BY created_at DESC LIMIT 1) as latest_preview,
+			(SELECT sender_id FROM messages WHERE conversation_id = c.id ORDER BY created_at DESC LIMIT 1) as latest_sender,
+			(SELECT status FROM messages WHERE conversation_id = c.id ORDER BY created_at DESC LIMIT 1) as latest_status,
+			(SELECT is_deleted FROM messages WHERE conversation_id = c.id ORDER BY created_at DESC LIMIT 1) as latest_deleted,
 			0 as unread_count
 		FROM conversations c
 		JOIN participants p_me ON c.id = p_me.conversation_id
@@ -98,11 +101,27 @@ func (db *appdbimpl) GetConversations(userId int64) ([]Conversation, error) {
 	for rows.Next() {
 		var c Conversation
 		var preview sql.NullString
-		if err := rows.Scan(&c.ID, &c.Name, &c.IsGroup, &c.PhotoURL, &c.LastMessageAt, &preview, &c.UnreadCount); err != nil {
+		var senderId sql.NullInt64
+		var status sql.NullInt64
+		var deleted sql.NullBool
+		var lastAt sql.NullTime
+		if err := rows.Scan(&c.ID, &c.Name, &c.IsGroup, &c.PhotoURL, &lastAt, &preview, &senderId, &status, &deleted, &c.UnreadCount); err != nil {
 			return nil, err
+		}
+		if lastAt.Valid {
+			c.LastMessageAt = lastAt.Time
 		}
 		if preview.Valid {
 			c.LatestMessagePreview = preview.String
+		}
+		if senderId.Valid {
+			c.LatestMessageSenderId = senderId.Int64
+		}
+		if status.Valid {
+			c.LatestMessageStatus = int(status.Int64)
+		}
+		if deleted.Valid {
+			c.LatestMessageDeleted = deleted.Bool
 		}
 		conversations = append(conversations, c)
 	}
@@ -111,10 +130,14 @@ func (db *appdbimpl) GetConversations(userId int64) ([]Conversation, error) {
 
 func (db *appdbimpl) GetConversation(id int64) (Conversation, error) {
 	var c Conversation
+	var lastAt sql.NullTime
 	err := db.c.QueryRow(`
 		SELECT id, IFNULL(name, ''), is_group, IFNULL(photo_url, ''), last_message_at
 		FROM conversations WHERE id = ?
-	`, id).Scan(&c.ID, &c.Name, &c.IsGroup, &c.PhotoURL, &c.LastMessageAt)
+	`, id).Scan(&c.ID, &c.Name, &c.IsGroup, &c.PhotoURL, &lastAt)
+	if lastAt.Valid {
+		c.LastMessageAt = lastAt.Time
+	}
 	return c, err
 }
 

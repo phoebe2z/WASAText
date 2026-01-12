@@ -73,7 +73,8 @@ func (db *appdbimpl) GetMessages(conversationId int64) ([]Message, error) {
 			m.content, 
 			m.content_type, 
 			m.reply_to_id, 
-			m.status
+			m.status,
+			m.is_deleted
 		FROM messages m
 		JOIN users u ON m.sender_id = u.id
 		WHERE m.conversation_id = ?
@@ -88,7 +89,7 @@ func (db *appdbimpl) GetMessages(conversationId int64) ([]Message, error) {
 	for rows.Next() {
 		var m Message
 		var replyTo sql.NullInt64
-		if err := rows.Scan(&m.ID, &m.ConversationId, &m.SenderId, &m.SenderName, &m.TimeStamp, &m.Content, &m.ContentType, &replyTo, &m.Status); err != nil {
+		if err := rows.Scan(&m.ID, &m.ConversationId, &m.SenderId, &m.SenderName, &m.TimeStamp, &m.Content, &m.ContentType, &replyTo, &m.Status, &m.IsDeleted); err != nil {
 			return nil, err
 		}
 		if replyTo.Valid {
@@ -113,11 +114,11 @@ func (db *appdbimpl) GetMessage(id int64) (Message, error) {
 	var m Message
 	var replyTo sql.NullInt64
 	err := db.c.QueryRow(`
-		SELECT m.id, m.conversation_id, m.sender_id, u.name, m.content, m.content_type, m.reply_to_id, m.created_at, m.status
+		SELECT m.id, m.conversation_id, m.sender_id, u.name, m.content, m.content_type, m.reply_to_id, m.created_at, m.status, m.is_deleted
 		FROM messages m
 		JOIN users u ON m.sender_id = u.id
 		WHERE m.id = ?
-	`, id).Scan(&m.ID, &m.ConversationId, &m.SenderId, &m.SenderName, &m.Content, &m.ContentType, &replyTo, &m.TimeStamp, &m.Status)
+	`, id).Scan(&m.ID, &m.ConversationId, &m.SenderId, &m.SenderName, &m.Content, &m.ContentType, &replyTo, &m.TimeStamp, &m.Status, &m.IsDeleted)
 
 	if replyTo.Valid {
 		m.ReplyToId = &replyTo.Int64
@@ -126,7 +127,7 @@ func (db *appdbimpl) GetMessage(id int64) (Message, error) {
 }
 
 func (db *appdbimpl) DeleteMessage(id int64) error {
-	_, err := db.c.Exec("DELETE FROM messages WHERE id = ?", id)
+	_, err := db.c.Exec("UPDATE messages SET is_deleted = 1 WHERE id = ?", id)
 	return err
 }
 
