@@ -140,10 +140,57 @@ paths:
         required: true
       responses:
         "200":
-          description: User name updated successfully
+          description: User photo updated successfully
           content: {}
         "401":
           description: The user is unauthorized
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorResponse"}
+
+  /user/me:
+    get:
+      tags: ["user"]
+      summary: Get current user profile
+      description: Returns the profile of the currently authenticated user
+      operationId: getMyProfile
+      responses:
+        "200":
+          description: Successfully retrieved user profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/user-info"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorResponse"}
+
+  /users:
+    get:
+      tags: ["user"]
+      summary: List users
+      description: List users with optional search query
+      operationId: listUsers
+      parameters:
+        - name: q
+          in: query
+          required: false
+          description: Search query for username
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Successfully retrieved users list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/user-info"
+        "401":
+          description: Unauthorized
           content:
             application/json:
               schema: {$ref: "#/components/schemas/ErrorResponse"}
@@ -171,6 +218,29 @@ paths:
           content:
             application/json:
               schema: {$ref: "#/components/schemas/ErrorResponse"}
+    post:
+      tags: ["conversations"]
+      summary: Create conversation (DM)
+      description: Create a new one-to-one conversation with another user
+      operationId: createConversation
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                recipientName:
+                  type: string
+              required: [recipientName]
+      responses:
+        "201":
+          description: Conversation created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/conversation-info"
+        "404":
+          description: Recipient not found
         
   /conversations/{conversationId}:
     parameters:
@@ -439,8 +509,8 @@ paths:
                   items:
                     type: integer
               required:
-               - name
-               - initialMembers
+                - name
+                - initialMembers
         required: true
       responses:
         "201":
@@ -469,6 +539,24 @@ paths:
         schema:
           type: integer
           description: an incremental number 
+    get:
+      tags: ["group"]
+      summary: Get group members
+      description: Returns a list of users in the group
+      operationId: getGroupMembers
+      responses:
+        "200":
+          description: Successfully retrieved group members
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/user-info"
+        "401":
+          description: Unauthorized
+        "404":
+          description: Group not found
           
     post:
       tags: ["group"]
@@ -561,7 +649,7 @@ paths:
                   maxLength: 20
                   pattern: '^.*?$'
               required:
-               - newName
+                - newName
         required: true
       responses:
         "200":
@@ -649,6 +737,17 @@ components:
       required: 
         - error
   
+    user-info:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        photoUrl:
+          type: string
+      required: [id, name]
+
     conversation-info:
       type: object
       description: Information about a single conversation shown in the list
@@ -720,6 +819,9 @@ components:
         conversationId:
           type: integer
           description: The  ID of the conversation the message belongs to
+        senderId:
+          type: integer
+          description: The ID of the message sender
         senderName:
           type: string
           description: The display name of message sender
@@ -762,6 +864,7 @@ components:
       required:
         - id
         - conversationId
+        - senderId
         - senderName
         - timeStamp
         - content

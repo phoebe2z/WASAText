@@ -11,7 +11,12 @@ func (db *appdbimpl) RemoveReaction(messageId int64, userId int64) error {
 }
 
 func (db *appdbimpl) GetReactions(messageId int64) ([]Reaction, error) {
-	rows, err := db.c.Query("SELECT user_id, emoticon FROM reactions WHERE message_id = ?", messageId)
+	rows, err := db.c.Query(`
+		SELECT r.user_id, u.name, r.emoticon 
+		FROM reactions r
+		JOIN users u ON r.user_id = u.id
+		WHERE r.message_id = ?
+	`, messageId)
 	if err != nil {
 		return nil, err
 	}
@@ -21,17 +26,9 @@ func (db *appdbimpl) GetReactions(messageId int64) ([]Reaction, error) {
 	for rows.Next() {
 		var r Reaction
 		r.MessageID = messageId
-		if err := rows.Scan(&r.UserID, &r.Emoticon); err != nil {
+		if err := rows.Scan(&r.UserID, &r.ReactorName, &r.Emoticon); err != nil {
 			return nil, err
 		}
-
-		// Fetch reactor name - ideally this should be a JOIN in the query for performance
-		var name string
-		_ = db.c.QueryRow("SELECT name FROM users WHERE id = ?", r.UserID).Scan(&name)
-		// Note: The Reaction model in API spec has "reactorName". The struct in database.go has UserID.
-		// I should potentially update the struct or handle this join.
-		// Let's modify the query to JOIN.
-
 		reactions = append(reactions, r)
 	}
 	return reactions, rows.Err()

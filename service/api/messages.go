@@ -19,7 +19,7 @@ func (rt *_router) sendMessage(w http.ResponseWriter, r *http.Request, ps httpro
 		ConversationId int64  `json:"conversationId"`
 		Content        string `json:"content"`
 		ContentType    string `json:"contentType"`
-		ReplyToId      *int64 `json:"replytoId"` // Note: casing in api.yaml is replytoId, but standard Go convention vs JSON. Check usage.
+		ReplyToId      *int64 `json:"replyToId"` // Casing fixed to match api.yaml
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
@@ -43,7 +43,7 @@ func (rt *_router) sendMessage(w http.ResponseWriter, r *http.Request, ps httpro
 		return
 	}
 	if !in {
-		w.WriteHeader(http.StatusNotFound) // or Forbidden, spec says 404 "Target conversation not found" (implies or not accessible)
+		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 
@@ -54,6 +54,7 @@ func (rt *_router) sendMessage(w http.ResponseWriter, r *http.Request, ps httpro
 		return
 	}
 
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(msg)
 }

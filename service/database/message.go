@@ -12,6 +12,14 @@ func (db *appdbimpl) SendMessage(conversationId int64, senderId int64, content s
 		return message, err
 	}
 
+	// Fetch sender name
+	var senderName string
+	err = tx.QueryRow("SELECT name FROM users WHERE id = ?", senderId).Scan(&senderName)
+	if err != nil {
+		tx.Rollback()
+		return message, err
+	}
+
 	// Create Message
 	res, err := tx.Exec(`
 		INSERT INTO messages (conversation_id, sender_id, content, content_type, reply_to_id, created_at, status)
@@ -44,6 +52,7 @@ func (db *appdbimpl) SendMessage(conversationId int64, senderId int64, content s
 	message.ID = id
 	message.ConversationID = conversationId
 	message.SenderID = senderId
+	message.SenderName = senderName
 	message.Content = content
 	message.ContentType = contentType
 	message.ReplyToID = replyToId
@@ -55,16 +64,12 @@ func (db *appdbimpl) SendMessage(conversationId int64, senderId int64, content s
 
 func (db *appdbimpl) GetMessages(conversationId int64) ([]Message, error) {
 	rows, err := db.c.Query(`
-		SELECT id, conversation_id, sender_id, content, content_type, reply_to_id, created_at, status
-		FROM messages
-		WHERE conversation_id = ?
-		ORDER BY created_at DESC 
-	`, conversationId) // API says reverse chronologically, usually means newest first, but let's check spec details or standard chat app. Usually API returns history. API Spec says "reverse chronologically".
-	// NOTE: Spec says "Array of messages... reverse chronologically". This usually means newest first.
-	// But chat apps usually display oldest at top. If the API client appends to bottom, it might want chronological.
-	// However, if spec says reverse chronological, I should follow spec.
-
-	// Correcting to DESC based on spec "reverse chronologically"
+		SELECT m.id, m.conversation_id, m.sender_id, u.name, m.content, m.content_type, m.reply_to_id, m.created_at, m.status
+		FROM messages m
+		JOIN users u ON m.sender_id = u.id
+		WHERE m.conversation_id = ?
+		ORDER BY m.created_at DESC
+	`, conversationId)
 
 	if err != nil {
 		return nil, err
@@ -75,7 +80,7 @@ func (db *appdbimpl) GetMessages(conversationId int64) ([]Message, error) {
 	for rows.Next() {
 		var m Message
 		var replyTo sql.NullInt64
-		if err := rows.Scan(&m.ID, &m.ConversationID, &m.SenderID, &m.Content, &m.ContentType, &replyTo, &m.CreatedAt, &m.Status); err != nil {
+		if err := rows.Scan(&m.ID, &m.ConversationID, &m.SenderID, &m.SenderName, &m.Content, &m.ContentType, &replyTo, &m.CreatedAt, &m.Status); err != nil {
 			return nil, err
 		}
 		if replyTo.Valid {
@@ -85,10 +90,6 @@ func (db *appdbimpl) GetMessages(conversationId int64) ([]Message, error) {
 		messages = append(messages, m)
 	}
 
-	// If spec expects reverse chronological (Newest first), we should iterate and sort or change query.
-	// I'll stick to DESC in DB query if that's what's meant.
-	// Re-reading spec: "Array of messages in the conversation, reverse chronologically"
-
 	return messages, rows.Err()
 }
 
@@ -96,9 +97,11 @@ func (db *appdbimpl) GetMessage(id int64) (Message, error) {
 	var m Message
 	var replyTo sql.NullInt64
 	err := db.c.QueryRow(`
-		SELECT id, conversation_id, sender_id, content, content_type, reply_to_id, created_at, status
-		FROM messages WHERE id = ?
-	`, id).Scan(&m.ID, &m.ConversationID, &m.SenderID, &m.Content, &m.ContentType, &replyTo, &m.CreatedAt, &m.Status)
+		SELECT m.id, m.conversation_id, m.sender_id, u.name, m.content, m.content_type, m.reply_to_id, m.created_at, m.status
+		FROM messages m
+		JOIN users u ON m.sender_id = u.id
+		WHERE m.id = ?
+	`, id).Scan(&m.ID, &m.ConversationID, &m.SenderID, &m.SenderName, &m.Content, &m.ContentType, &replyTo, &m.CreatedAt, &m.Status)
 
 	if replyTo.Valid {
 		rid := replyTo.Int64

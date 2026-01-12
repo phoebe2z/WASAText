@@ -129,27 +129,31 @@ type User struct {
 }
 
 type Conversation struct {
-	ID            int64     `json:"conversationId"`
-	Name          string    `json:"name"`
-	IsGroup       bool      `json:"isGroup"`
-	PhotoURL      string    `json:"photoUrl"`
-	LastMessageAt time.Time `json:"latestMessageTime"`
+	ID                   int64     `json:"conversationId"`
+	Name                 string    `json:"name"`
+	IsGroup              bool      `json:"isGroup"`
+	PhotoURL             string    `json:"photoUrl"`
+	LastMessageAt        time.Time `json:"latestMessageTime"`
+	LatestMessagePreview string    `json:"latestMessagePreview"`
+	UnreadCount          int       `json:"unreadCount"`
 }
 
 type Message struct {
 	ID             int64      `json:"id"`
 	ConversationID int64      `json:"conversationId"`
-	SenderID       int64      `json:"senderId"` // NOTE: API spec says senderName, DB stores ID
+	SenderID       int64      `json:"senderId"`
+	SenderName     string     `json:"senderName"`
 	Content        string     `json:"content"`
 	ContentType    string     `json:"contentType"`
-	ReplyToID      *int64     `json:"replyToId"` // Pointer to handle null
+	ReplyToID      *int64     `json:"replyToId"`
 	CreatedAt      time.Time  `json:"timeStamp"`
 	Status         int        `json:"status"`
 	Reactions      []Reaction `json:"reactions"`
 }
 
 type Reaction struct {
-	MessageID int64  `json:"-"`
-	UserID    int64  `json:"-"`
-	Emoticon  string `json:"emoticon"`
+	MessageID   int64  `json:"-"`
+	UserID      int64  `json:"-"`
+	ReactorName string `json:"reactorName"`
+	Emoticon    string `json:"emoticon"`
 }

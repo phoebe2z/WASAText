@@ -1,6 +1,7 @@
 package database
 
 import (
+	"database/sql"
 	"time"
 )
 
@@ -80,7 +81,9 @@ func (db *appdbimpl) GetConversations(userId int64) ([]Conversation, error) {
 					)
 				)
 			END, 
-			c.last_message_at
+			c.last_message_at,
+			(SELECT content FROM messages WHERE conversation_id = c.id ORDER BY created_at DESC LIMIT 1) as latest_preview,
+			0 as unread_count
 		FROM conversations c
 		JOIN participants p_me ON c.id = p_me.conversation_id
 		WHERE p_me.user_id = ?
@@ -94,8 +97,12 @@ func (db *appdbimpl) GetConversations(userId int64) ([]Conversation, error) {
 	var conversations []Conversation
 	for rows.Next() {
 		var c Conversation
-		if err := rows.Scan(&c.ID, &c.Name, &c.IsGroup, &c.PhotoURL, &c.LastMessageAt); err != nil {
+		var preview sql.NullString
+		if err := rows.Scan(&c.ID, &c.Name, &c.IsGroup, &c.PhotoURL, &c.LastMessageAt, &preview, &c.UnreadCount); err != nil {
 			return nil, err
+		}
+		if preview.Valid {
+			c.LatestMessagePreview = preview.String
 		}
 		conversations = append(conversations, c)
 	}
