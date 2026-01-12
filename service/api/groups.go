@@ -43,10 +43,10 @@ func (rt *_router) getGroupMembers(w http.ResponseWriter, r *http.Request, ps ht
 
 	w.WriteHeader(http.StatusOK)
 	if members == nil {
-		w.Write([]byte("[]"))
+		_, _ = w.Write([]byte("[]"))
 		return
 	}
-	json.NewEncoder(w).Encode(members)
+	_ = json.NewEncoder(w).Encode(members)
 }
 
 func (rt *_router) createGroup(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
@@ -89,7 +89,7 @@ func (rt *_router) createGroup(w http.ResponseWriter, r *http.Request, ps httpro
 	}
 
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(map[string]int64{"groupId": group.ID})
+	_ = json.NewEncoder(w).Encode(map[string]int64{"groupId": group.ID})
 }
 
 func (rt *_router) addToGroup(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {

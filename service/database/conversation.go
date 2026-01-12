@@ -16,19 +16,19 @@ func (db *appdbimpl) CreateConversation(name string, isGroup bool, initialMember
 	// Create Conversation
 	res, err := tx.Exec("INSERT INTO conversations (name, is_group, last_message_at) VALUES (?, ?, ?)", name, isGroup, time.Now())
 	if err != nil {
-		tx.Rollback()
+		_ = tx.Rollback()
 		return conversation, err
 	}
 	id, err := res.LastInsertId()
 	if err != nil {
-		tx.Rollback()
+		_ = tx.Rollback()
 		return conversation, err
 	}
 
 	// Add Participants (Unique)
 	stmt, err := tx.Prepare("INSERT INTO participants (conversation_id, user_id) VALUES (?, ?)")
 	if err != nil {
-		tx.Rollback()
+		_ = tx.Rollback()
 		return conversation, err
 	}
 	defer stmt.Close()
@@ -41,7 +41,7 @@ func (db *appdbimpl) CreateConversation(name string, isGroup bool, initialMember
 		seen[memberId] = true
 		_, err = stmt.Exec(id, memberId)
 		if err != nil {
-			tx.Rollback()
+			_ = tx.Rollback()
 			return conversation, err
 		}
 	}
@@ -122,6 +122,23 @@ func (db *appdbimpl) IsUserInConversation(conversationId int64, userId int64) (b
 	var count int
 	err := db.c.QueryRow("SELECT COUNT(*) FROM participants WHERE conversation_id = ? AND user_id = ?", conversationId, userId).Scan(&count)
 	return count > 0, err
+}
+
+func (db *appdbimpl) FindOneOnOneConversation(userId1, userId2 int64) (int64, error) {
+	var id int64
+	err := db.c.QueryRow(`
+		SELECT c.id 
+		FROM conversations c
+		JOIN participants p1 ON c.id = p1.conversation_id
+		JOIN participants p2 ON c.id = p2.conversation_id
+		WHERE c.is_group = 0 
+		AND p1.user_id = ? 
+		AND p2.user_id = ?
+	`, userId1, userId2).Scan(&id)
+	if err == sql.ErrNoRows {
+		return 0, nil
+	}
+	return id, err
 }
 
 func (db *appdbimpl) GetConversationMembers(conversationId int64) ([]int64, error) {

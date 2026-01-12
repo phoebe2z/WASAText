@@ -16,7 +16,7 @@ func (db *appdbimpl) SendMessage(conversationId int64, senderId int64, content s
 	var senderName string
 	err = tx.QueryRow("SELECT name FROM users WHERE id = ?", senderId).Scan(&senderName)
 	if err != nil {
-		tx.Rollback()
+		_ = tx.Rollback()
 		return message, err
 	}
 
@@ -27,20 +27,20 @@ func (db *appdbimpl) SendMessage(conversationId int64, senderId int64, content s
 	`, conversationId, senderId, content, contentType, replyToId, time.Now())
 
 	if err != nil {
-		tx.Rollback()
+		_ = tx.Rollback()
 		return message, err
 	}
 
 	id, err := res.LastInsertId()
 	if err != nil {
-		tx.Rollback()
+		_ = tx.Rollback()
 		return message, err
 	}
 
 	// Update Conversation LastMessageAt
 	_, err = tx.Exec("UPDATE conversations SET last_message_at = ? WHERE id = ?", time.Now(), conversationId)
 	if err != nil {
-		tx.Rollback()
+		_ = tx.Rollback()
 		return message, err
 	}
 
@@ -50,13 +50,13 @@ func (db *appdbimpl) SendMessage(conversationId int64, senderId int64, content s
 	}
 
 	message.ID = id
-	message.ConversationID = conversationId
-	message.SenderID = senderId
+	message.ConversationId = conversationId
+	message.SenderId = senderId
 	message.SenderName = senderName
 	message.Content = content
 	message.ContentType = contentType
-	message.ReplyToID = replyToId
-	message.CreatedAt = time.Now()
+	message.ReplyToId = replyToId
+	message.TimeStamp = time.Now()
 	message.Status = 0
 
 	return message, nil
@@ -64,13 +64,21 @@ func (db *appdbimpl) SendMessage(conversationId int64, senderId int64, content s
 
 func (db *appdbimpl) GetMessages(conversationId int64) ([]Message, error) {
 	rows, err := db.c.Query(`
-		SELECT m.id, m.conversation_id, m.sender_id, u.name, m.content, m.content_type, m.reply_to_id, m.created_at, m.status
+		SELECT 
+			m.id, 
+			m.conversation_id, 
+			m.sender_id, 
+			u.name as sender_name,
+			m.created_at, 
+			m.content, 
+			m.content_type, 
+			m.reply_to_id, 
+			m.status
 		FROM messages m
 		JOIN users u ON m.sender_id = u.id
 		WHERE m.conversation_id = ?
-		ORDER BY m.created_at DESC
+		ORDER BY m.created_at ASC
 	`, conversationId)
-
 	if err != nil {
 		return nil, err
 	}
@@ -80,14 +88,22 @@ func (db *appdbimpl) GetMessages(conversationId int64) ([]Message, error) {
 	for rows.Next() {
 		var m Message
 		var replyTo sql.NullInt64
-		if err := rows.Scan(&m.ID, &m.ConversationID, &m.SenderID, &m.SenderName, &m.Content, &m.ContentType, &replyTo, &m.CreatedAt, &m.Status); err != nil {
+		if err := rows.Scan(&m.ID, &m.ConversationId, &m.SenderId, &m.SenderName, &m.TimeStamp, &m.Content, &m.ContentType, &replyTo, &m.Status); err != nil {
 			return nil, err
 		}
 		if replyTo.Valid {
-			id := replyTo.Int64
-			m.ReplyToID = &id
+			m.ReplyToId = &replyTo.Int64
 		}
 		messages = append(messages, m)
+	}
+
+	// Fetch reactions for each message
+	for i := range messages {
+		reactions, err := db.GetReactions(messages[i].ID)
+		if err != nil {
+			return nil, err
+		}
+		messages[i].Reactions = reactions
 	}
 
 	return messages, rows.Err()
@@ -101,11 +117,10 @@ func (db *appdbimpl) GetMessage(id int64) (Message, error) {
 		FROM messages m
 		JOIN users u ON m.sender_id = u.id
 		WHERE m.id = ?
-	`, id).Scan(&m.ID, &m.ConversationID, &m.SenderID, &m.SenderName, &m.Content, &m.ContentType, &replyTo, &m.CreatedAt, &m.Status)
+	`, id).Scan(&m.ID, &m.ConversationId, &m.SenderId, &m.SenderName, &m.Content, &m.ContentType, &replyTo, &m.TimeStamp, &m.Status)
 
 	if replyTo.Valid {
-		rid := replyTo.Int64
-		m.ReplyToID = &rid
+		m.ReplyToId = &replyTo.Int64
 	}
 	return m, err
 }

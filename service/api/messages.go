@@ -56,7 +56,7 @@ func (rt *_router) sendMessage(w http.ResponseWriter, r *http.Request, ps httpro
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(msg)
+	_ = json.NewEncoder(w).Encode(msg)
 }
 
 func (rt *_router) deleteMessage(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
@@ -79,7 +79,7 @@ func (rt *_router) deleteMessage(w http.ResponseWriter, r *http.Request, ps http
 		return
 	}
 
-	if msg.SenderID != userId {
+	if msg.SenderId != userId {
 		w.WriteHeader(http.StatusForbidden)
 		return
 	}
@@ -113,7 +113,7 @@ func (rt *_router) forwardMessage(w http.ResponseWriter, r *http.Request, ps htt
 		return
 	}
 	// Check if user has access to original message (is in conversation)
-	in, _ := rt.db.IsUserInConversation(msg.ConversationID, userId)
+	in, _ := rt.db.IsUserInConversation(msg.ConversationId, userId)
 	if !in {
 		w.WriteHeader(http.StatusNotFound)
 		return
@@ -164,7 +164,7 @@ func (rt *_router) commentMessage(w http.ResponseWriter, r *http.Request, ps htt
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
-	in, _ := rt.db.IsUserInConversation(msg.ConversationID, userId)
+	in, _ := rt.db.IsUserInConversation(msg.ConversationId, userId)
 	if !in {
 		w.WriteHeader(http.StatusNotFound)
 		return

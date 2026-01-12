@@ -25,13 +25,14 @@ type AppDatabase interface {
 	CreateConversation(name string, isGroup bool, initialMembers []int64) (Conversation, error)
 	GetConversations(userId int64) ([]Conversation, error)
 	GetConversation(id int64) (Conversation, error)
+	IsUserInConversation(conversationId int64, userId int64) (bool, error)
+	FindOneOnOneConversation(userId1, userId2 int64) (int64, error)
 
 	// Group Specific
 	SetGroupName(id int64, name string) error
 	SetGroupPhoto(id int64, photoURL string) error
 	AddMember(groupId int64, userId int64) error
 	RemoveMember(groupId int64, userId int64) error
-	IsUserInConversation(conversationId int64, userId int64) (bool, error)
 	GetConversationMembers(conversationId int64) ([]int64, error)
 	GetConversationMembersDetailed(conversationId int64) ([]User, error)
 
@@ -111,6 +112,25 @@ func New(db *sql.DB) (AppDatabase, error) {
 		}
 	}
 
+	// Cleanup duplicate 1-on-1 conversations
+	_, _ = db.Exec(`
+		DELETE FROM conversations
+		WHERE id IN (
+			SELECT c1.id
+			FROM conversations c1
+			JOIN participants p1a ON c1.id = p1a.conversation_id
+			JOIN participants p1b ON c1.id = p1b.conversation_id
+			WHERE c1.is_group = 0 AND p1a.user_id < p1b.user_id
+			AND EXISTS (
+				SELECT 1 FROM conversations c2
+				JOIN participants p2a ON c2.id = p2a.conversation_id
+				JOIN participants p2b ON c2.id = p2b.conversation_id
+				WHERE c2.is_group = 0 AND p2a.user_id = p1a.user_id AND p2b.user_id = p1b.user_id
+				AND (c2.last_message_at > c1.last_message_at OR (c2.last_message_at = c1.last_message_at AND c2.id > c1.id))
+			)
+		)
+	`)
+
 	return &appdbimpl{
 		c: db,
 	}, nil
@@ -140,13 +160,13 @@ type Conversation struct {
 
 type Message struct {
 	ID             int64      `json:"id"`
-	ConversationID int64      `json:"conversationId"`
-	SenderID       int64      `json:"senderId"`
+	ConversationId int64      `json:"conversationId"`
+	SenderId       int64      `json:"senderId"`
 	SenderName     string     `json:"senderName"`
 	Content        string     `json:"content"`
 	ContentType    string     `json:"contentType"`
-	ReplyToID      *int64     `json:"replyToId"`
-	CreatedAt      time.Time  `json:"timeStamp"`
+	ReplyToId      *int64     `json:"replyToId"`
+	TimeStamp      time.Time  `json:"timeStamp"`
 	Status         int        `json:"status"`
 	Reactions      []Reaction `json:"reactions"`
 }

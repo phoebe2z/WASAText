@@ -128,7 +128,7 @@ func (rt *_router) setMyPhoto(w http.ResponseWriter, r *http.Request, ps httprou
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]string{"photoUrl": photoURL})
+	_ = json.NewEncoder(w).Encode(map[string]string{"photoUrl": photoURL})
 }
 
 func (rt *_router) getMyProfile(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
@@ -145,7 +145,7 @@ func (rt *_router) getMyProfile(w http.ResponseWriter, r *http.Request, ps httpr
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(user)
+	_ = json.NewEncoder(w).Encode(user)
 }
 func (rt *_router) listUsers(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	_, err := extractBearer(r)
@@ -163,5 +163,5 @@ func (rt *_router) listUsers(w http.ResponseWriter, r *http.Request, ps httprout
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(users)
+	_ = json.NewEncoder(w).Encode(users)
 }

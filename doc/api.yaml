@@ -761,7 +761,7 @@ components:
           minLength: 1
           maxLength: 20
           pattern: '^.*?$'
-        photoURL:
+        photoUrl:
           type: string
           format: url
           description: URL to the user/group photo

@@ -24,10 +24,10 @@ func (rt *_router) getMyConversations(w http.ResponseWriter, r *http.Request, ps
 
 	w.WriteHeader(http.StatusOK)
 	if conversations == nil {
-		w.Write([]byte("[]"))
+		_, _ = w.Write([]byte("[]"))
 		return
 	}
-	json.NewEncoder(w).Encode(conversations)
+	_ = json.NewEncoder(w).Encode(conversations)
 }
 
 func (rt *_router) getConversation(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
@@ -62,21 +62,13 @@ func (rt *_router) getConversation(w http.ResponseWriter, r *http.Request, ps ht
 		return
 	}
 
-	// Enrich messages with reactions (N+1 query issue here potentially, but okay for homework)
-	for i := range messages {
-		reactions, err := rt.db.GetReactions(messages[i].ID)
-		if err == nil {
-			messages[i].Reactions = reactions // Assuming struct has Reactions field (I added it in database.go)
-		}
-	}
-
 	w.WriteHeader(http.StatusOK)
 	if messages == nil {
-		w.Write([]byte("[]"))
+		_, _ = w.Write([]byte("[]"))
 		return
 	}
 
-	json.NewEncoder(w).Encode(messages)
+	_ = json.NewEncoder(w).Encode(messages)
 }
 
 func (rt *_router) createConversation(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
@@ -105,11 +97,24 @@ func (rt *_router) createConversation(w http.ResponseWriter, r *http.Request, ps
 	// Prevent self-chat
 	if user.ID == userId {
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"error": "cannot chat with yourself"})
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "cannot chat with yourself"})
 		return
 	}
 
 	members := []int64{userId, user.ID}
+
+	// Check if conversation already exists
+	existingId, err := rt.db.FindOneOnOneConversation(userId, user.ID)
+	if err != nil {
+		rt.baseLogger.WithError(err).Error("error finding existing conversation")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if existingId != 0 {
+		w.WriteHeader(http.StatusBadRequest)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "conversation already exists"})
+		return
+	}
 
 	// Create conversation
 	conversation, err := rt.db.CreateConversation("", false, members)
@@ -120,5 +125,5 @@ func (rt *_router) createConversation(w http.ResponseWriter, r *http.Request, ps
 	}
 
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(conversation)
+	_ = json.NewEncoder(w).Encode(conversation)
 }

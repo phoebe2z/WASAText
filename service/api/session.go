@@ -30,7 +30,7 @@ func (rt *_router) doLogin(w http.ResponseWriter, r *http.Request, ps httprouter
 	if err == nil {
 		// User exists, return ID
 		w.WriteHeader(http.StatusCreated)
-		json.NewEncoder(w).Encode(map[string]int64{"identifier": user.ID})
+		_ = json.NewEncoder(w).Encode(map[string]int64{"identifier": user.ID})
 		return
 	}
 
@@ -43,5 +43,5 @@ func (rt *_router) doLogin(w http.ResponseWriter, r *http.Request, ps httprouter
 	}
 
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(map[string]int64{"identifier": newUser.ID})
+	_ = json.NewEncoder(w).Encode(map[string]int64{"identifier": newUser.ID})
 }
