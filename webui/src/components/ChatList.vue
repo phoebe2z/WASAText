@@ -176,8 +176,11 @@ export default {
                         <div class="d-flex justify-content-between align-items-center">
                             <div class="d-flex align-items-center gap-1 overflow-hidden" style="max-width: 90%;">
                                 <div v-if="parseInt(c.latestMessageSenderId) === parseInt(currentUserId)" class="d-flex align-items-center flex-shrink-0">
-                                     <svg v-if="c.latestMessageStatus === 0" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#8696a0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                                     <svg v-else-if="c.latestMessageStatus === 1" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8696a0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 12 12 17 22 7"></polyline><polyline points="2 12 7 17 17 7"></polyline></svg>
+                                     <!-- Sent (Clock - Image 2) -->
+                                     <svg v-if="c.latestMessageStatus === 0" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#8696a0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                                     <!-- Received (Single Check - Image 1) -->
+                                     <svg v-else-if="c.latestMessageStatus === 1" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#8696a0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                     <!-- Read (Double Check - Image 3) -->
                                      <svg v-else xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#53bdeb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 12 12 17 22 7"></polyline><polyline points="2 12 7 17 17 7"></polyline></svg>
                                 </div>
                                 <small v-if="c.latestMessageDeleted" class="text-secondary text-truncate d-block fst-italic">

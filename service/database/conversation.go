@@ -84,7 +84,18 @@ func (db *appdbimpl) GetConversations(userId int64) ([]Conversation, error) {
 			c.last_message_at,
 			(SELECT content FROM messages WHERE conversation_id = c.id ORDER BY created_at DESC LIMIT 1) as latest_preview,
 			(SELECT sender_id FROM messages WHERE conversation_id = c.id ORDER BY created_at DESC LIMIT 1) as latest_sender,
-			(SELECT status FROM messages WHERE conversation_id = c.id ORDER BY created_at DESC LIMIT 1) as latest_status,
+			(SELECT 
+				CASE 
+					WHEN m_inner.status >= 2 THEN 2
+					WHEN NOT EXISTS (
+						SELECT 1 FROM participants p 
+						WHERE p.conversation_id = m_inner.conversation_id 
+						AND p.user_id != m_inner.sender_id 
+						AND (p.last_read_at IS NULL OR p.last_read_at < m_inner.created_at)
+					) THEN 2
+					ELSE m_inner.status
+				END
+			FROM messages m_inner WHERE m_inner.conversation_id = c.id ORDER BY m_inner.created_at DESC LIMIT 1) as latest_status,
 			(SELECT is_deleted FROM messages WHERE conversation_id = c.id ORDER BY created_at DESC LIMIT 1) as latest_deleted,
 			0 as unread_count
 		FROM conversations c
@@ -203,4 +214,9 @@ func (db *appdbimpl) GetConversationMembersDetailed(conversationId int64) ([]Use
 		members = append(members, u)
 	}
 	return members, rows.Err()
+}
+
+func (db *appdbimpl) UpdateParticipantLastRead(conversationId, userId int64) error {
+	_, err := db.c.Exec("UPDATE participants SET last_read_at = ? WHERE conversation_id = ? AND user_id = ?", time.Now(), conversationId, userId)
+	return err
 }

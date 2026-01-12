@@ -35,6 +35,7 @@ type AppDatabase interface {
 	RemoveMember(groupId int64, userId int64) error
 	GetConversationMembers(conversationId int64) ([]int64, error)
 	GetConversationMembersDetailed(conversationId int64) ([]User, error)
+	UpdateParticipantLastRead(conversationId, userId int64) error
 
 	// Message
 	SendMessage(conversationId int64, senderId int64, content string, contentType string, replyToId *int64) (Message, error)
@@ -79,6 +80,7 @@ func New(db *sql.DB) (AppDatabase, error) {
 		`CREATE TABLE IF NOT EXISTS participants (
 			conversation_id INTEGER NOT NULL,
 			user_id INTEGER NOT NULL,
+			last_read_at DATETIME,
 			PRIMARY KEY (conversation_id, user_id),
 			FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE,
 			FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
@@ -116,6 +118,8 @@ func New(db *sql.DB) (AppDatabase, error) {
 	// Migrations
 	_, _ = db.Exec("ALTER TABLE messages ADD COLUMN is_deleted BOOLEAN NOT NULL DEFAULT 0")
 	_, _ = db.Exec("ALTER TABLE conversations ADD COLUMN last_message_at DATETIME")
+	_, _ = db.Exec("ALTER TABLE participants ADD COLUMN last_read_at DATETIME")
+	_, _ = db.Exec("UPDATE messages SET status = 1 WHERE status = 0")
 
 	// Cleanup duplicate 1-on-1 conversations
 	_, _ = db.Exec(`

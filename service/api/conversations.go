@@ -55,6 +55,9 @@ func (rt *_router) getConversation(w http.ResponseWriter, r *http.Request, ps ht
 		return
 	}
 
+	// Update last read status
+	_ = rt.db.UpdateParticipantLastRead(conversationId, userId)
+
 	messages, err := rt.db.GetMessages(conversationId)
 	if err != nil {
 		rt.baseLogger.WithError(err).Error("error getting messages")

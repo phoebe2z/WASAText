@@ -23,7 +23,7 @@ func (db *appdbimpl) SendMessage(conversationId int64, senderId int64, content s
 	// Create Message
 	res, err := tx.Exec(`
 		INSERT INTO messages (conversation_id, sender_id, content, content_type, reply_to_id, created_at, status)
-		VALUES (?, ?, ?, ?, ?, ?, 0)
+		VALUES (?, ?, ?, ?, ?, ?, 1)
 	`, conversationId, senderId, content, contentType, replyToId, time.Now())
 
 	if err != nil {
@@ -73,7 +73,16 @@ func (db *appdbimpl) GetMessages(conversationId int64) ([]Message, error) {
 			m.content, 
 			m.content_type, 
 			m.reply_to_id, 
-			m.status,
+			CASE 
+				WHEN m.status >= 2 THEN 2
+				WHEN NOT EXISTS (
+					SELECT 1 FROM participants p 
+					WHERE p.conversation_id = m.conversation_id 
+					AND p.user_id != m.sender_id 
+					AND (p.last_read_at IS NULL OR p.last_read_at < m.created_at)
+				) THEN 2
+				ELSE m.status
+			END as status,
 			m.is_deleted
 		FROM messages m
 		JOIN users u ON m.sender_id = u.id

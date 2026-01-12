@@ -89,14 +89,29 @@ export default {
             }
         },
         async sendMessage(content, type = "text", replyToId = null) {
-            try {
-                let actualContent = content;
-                let actualType = type;
+            let actualContent = content;
+            let actualType = type;
+            const tempId = Date.now();
 
+            try {
                 if (content instanceof File) {
                     actualContent = await this.fileToBase64(content);
                     actualType = "photo";
                 }
+
+                // Optimistic Update: Add message locally with "Sending" status (0)
+                const tempMsg = {
+                    id: tempId,
+                    senderId: this.userId,
+                    senderName: this.username,
+                    content: actualContent,
+                    contentType: actualType,
+                    replyToId: replyToId,
+                    timeStamp: new Date().toISOString(),
+                    status: 0, // Clock icon
+                    pending: true
+                };
+                this.messages.push(tempMsg);
 
                 await this.$axios.post("/messages", {
                     conversationId: this.activeConversationId,
@@ -107,6 +122,8 @@ export default {
                 await this.openConversation(this.activeConversationId);
                 this.refreshConversations();
             } catch (e) {
+                // Remove the optimistic message on failure
+                this.messages = this.messages.filter(m => m.id !== tempId);
                 alert("Error sending message: " + (e.response ? (e.response.data || e.response.statusText) : e.message));
             }
         },
