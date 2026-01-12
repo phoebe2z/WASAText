@@ -103,7 +103,7 @@ func (rt *_router) createConversation(w http.ResponseWriter, r *http.Request, ps
 
 	members := []int64{userId, user.ID}
 
-	// Check if conversation already exists
+	// Check if 1-on-1 conversation already exists
 	existingId, err := rt.db.FindOneOnOneConversation(userId, user.ID)
 	if err != nil {
 		rt.baseLogger.WithError(err).Error("error finding existing conversation")
@@ -111,8 +111,12 @@ func (rt *_router) createConversation(w http.ResponseWriter, r *http.Request, ps
 		return
 	}
 	if existingId != 0 {
+		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		_ = json.NewEncoder(w).Encode(map[string]string{"error": "conversation already exists"})
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+			"message":        "conversation already exists",
+			"conversationId": existingId,
+		})
 		return
 	}
 

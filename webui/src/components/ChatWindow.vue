@@ -7,15 +7,17 @@ export default {
             newMessage: "",
             commonEmojis: ["👍", "❤️", "😂", "😮", "😢", "😡"],
             showReactionFor: null,
-            showEmojiPicker: false
+            showEmojiPicker: false,
+            replyingTo: null // Track message being replied to
         }
     },
     methods: {
         sendMessage() {
             if (!this.newMessage.trim()) return;
-            this.$emit('send-message', this.newMessage);
+            this.$emit('send-message', this.newMessage, "text", this.replyingTo ? this.replyingTo.id : null);
             this.newMessage = "";
             this.showEmojiPicker = false;
+            this.replyingTo = null;
         },
         addEmoji(emoji) {
             this.newMessage += emoji;
@@ -35,6 +37,24 @@ export default {
         startForward(msg) {
              this.$emit('forward-message', msg);
         },
+        setReply(msg) {
+            this.replyingTo = msg;
+            this.$nextTick(() => this.$refs.msgInput.focus());
+        },
+        cancelReply() {
+            this.replyingTo = null;
+        },
+        triggerFileInput() {
+            this.$refs.imageInput.click();
+        },
+        handleImageUpload(event) {
+            const file = event.target.files[0];
+            if (file) {
+                this.$emit('send-message', file, "photo", this.replyingTo ? this.replyingTo.id : null);
+                this.replyingTo = null;
+            }
+            event.target.value = ""; // Reset
+        },
         formatTime(t) {
             return new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         },
@@ -43,6 +63,27 @@ export default {
                 const container = this.$refs.msgContainer;
                 if (container) container.scrollTop = container.scrollHeight;
             });
+        },
+        scrollToMessage(id) {
+            this.$nextTick(() => {
+                const el = document.querySelector(`[key="${id}"]`); // This won't work easily with key, better use ID
+                // Actually, let's just find the message by ID in the list
+                const idx = this.messages.findIndex(m => m.id === id);
+                if (idx > -1) {
+                    const containers = this.$refs.msgContainer;
+                    // This is crude, but better than nothing
+                    const msgEl = containers.children[idx];
+                    if (msgEl) msgEl.scrollIntoView({ behavior: 'smooth' });
+                }
+            });
+        },
+        getReplyPreview(id) {
+            const msg = this.messages.find(m => m.id === id);
+            if (!msg) return "Original message deleted";
+            return msg.contentType === 'photo' ? '[Photo]' : msg.content;
+        },
+        openImage(url) {
+            window.open(url, '_blank');
         }
     },
     watch: {
@@ -86,7 +127,15 @@ export default {
                      <!-- Sender Name (if Group and not me) -->
                      <small v-if="conversation.isGroup && parseInt(msg.senderId) !== parseInt(userId)" class="text-warning fw-bold d-block mb-1" style="font-size: 0.75rem;">{{ msg.senderName || ('User ' + msg.senderId) }}</small>
                      
-                     <div class="text-white message-text">{{ msg.content }}</div>
+                     <div v-if="msg.replyToId" class="reply-preview p-2 mb-2 rounded border-start border-success border-4 bg-black bg-opacity-25" style="cursor: pointer;" @click="scrollToMessage(msg.replyToId)">
+                         <small class="text-success fw-bold d-block">Replying to...</small>
+                         <div class="text-white-50 text-truncate" style="max-height: 40px;">{{ getReplyPreview(msg.replyToId) }}</div>
+                     </div>
+
+                     <div v-if="msg.contentType === 'photo'" class="mb-2">
+                         <img :src="msg.content" class="rounded w-100 shadow-sm" style="max-height: 300px; object-fit: contain; cursor: pointer;" @click="openImage(msg.content)">
+                     </div>
+                     <div v-else class="text-white message-text">{{ msg.content }}</div>
                      
                      <!-- Reactions Display -->
                      <div v-if="msg.reactions && msg.reactions.length > 0" class="d-flex flex-wrap gap-1 mt-1">
@@ -98,6 +147,16 @@ export default {
                      <div class="d-flex justify-content-end align-items-center gap-2 mt-1">
                          <span class="text-white-50 time-text">{{ formatTime(msg.timeStamp) }}</span>
                          
+                         <!-- Checkmark Status -->
+                         <div v-if="parseInt(msg.senderId) === parseInt(userId)" class="status-icon d-flex align-items-center">
+                              <!-- Sent (1 Gray Check) -->
+                              <svg v-if="msg.status === 0" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8696a0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                              <!-- Received (2 Gray Checks) -->
+                              <svg v-else-if="msg.status === 1" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8696a0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 12 12 17 22 7"></polyline><polyline points="2 12 7 17 17 7"></polyline></svg>
+                              <!-- Read (2 Blue Checks) -->
+                              <svg v-else xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#53bdeb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 12 12 17 22 7"></polyline><polyline points="2 12 7 17 17 7"></polyline></svg>
+                         </div>
+
                          <!-- Actions Dropdown/Hover -->
                          <!-- Reaction Button -->
                          <div class="position-relative">
@@ -110,13 +169,18 @@ export default {
                              </div>
                          </div>
                          
+                         <!-- Reply -->
+                         <button class="btn btn-link p-0 text-white-50 action-btn" @click="setReply(msg)">
+                             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-corner-up-left"><polyline points="9 14 4 9 9 4"></polyline><path d="M20 20v-7a4 4 0 0 0-4-4H4"></path></svg>
+                         </button>
+
                          <!-- Forward -->
                          <button class="btn btn-link p-0 text-white-50 action-btn" @click="startForward(msg)">
                              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-share"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path><polyline points="16 6 12 2 8 6"></polyline><line x1="12" y1="2" x2="12" y2="15"></line></svg>
                          </button>
 
                          <!-- Delete -->
-                         <button v-if="msg.senderName === currentUser" class="btn btn-link p-0 text-white-50 action-btn" @click="$emit('delete-message', msg.id)">
+                         <button v-if="parseInt(msg.senderId) === parseInt(userId)" class="btn btn-link p-0 text-white-50 action-btn" @click="$emit('delete-message', msg.id)">
                              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-trash-2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
                          </button>
                      </div>
@@ -125,23 +189,40 @@ export default {
         </div>
 
         <!-- Input Area -->
-        <div class="p-2 bg-dark-header d-flex align-items-center gap-2">
-             <!-- Emoji Picker Container -->
-             <div class="position-relative">
-                <button class="btn btn-link text-secondary p-2" @click="showEmojiPicker = !showEmojiPicker">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-smile"><circle cx="12" cy="12" r="10"></circle><path d="M8 14s1.5 2 4 2 4-2 4-2"></path><line x1="9" y1="9" x2="9.01" y2="9"></line><line x1="15" y1="9" x2="15.01" y2="9"></line></svg>
-                </button>
-                <!-- Emoji Picker Popover -->
-                <div v-if="showEmojiPicker" class="position-absolute bottom-100 start-0 bg-dark border border-secondary rounded shadow p-2 d-flex flex-wrap gap-2" style="z-index: 1000; width: 180px;">
-                    <button v-for="emoji in commonEmojis" :key="emoji" class="btn btn-sm btn-link text-decoration-none p-1 fs-4" @click="addEmoji(emoji)">{{ emoji }}</button>
-                </div>
+        <div class="p-0 bg-dark-header border-top border-secondary">
+             <!-- Reply Bar -->
+             <div v-if="replyingTo" class="p-2 px-3 bg-dark-input d-flex align-items-center justify-content-between border-start border-success border-4 m-2 rounded">
+                 <div class="min-w-0">
+                     <small class="text-success fw-bold">Replying to {{ replyingTo.senderName }}</small>
+                     <div class="text-secondary text-truncate">{{ replyingTo.contentType === 'photo' ? '[Photo]' : replyingTo.content }}</div>
+                 </div>
+                 <button class="btn btn-link text-secondary p-0" @click="cancelReply">×</button>
              </div>
-             
-             <input type="text" class="form-control bg-dark-input text-white border-0 rounded-3 py-2" placeholder="Type a message" v-model="newMessage" @keyup.enter="sendMessage">
-             
-             <button class="btn btn-link text-secondary p-2" @click="sendMessage" :disabled="!newMessage.trim()">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-send"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
-             </button>
+
+             <div class="p-2 d-flex align-items-center gap-2">
+                 <!-- Emoji Picker Container -->
+                 <div class="position-relative">
+                    <button class="btn btn-link text-secondary p-2" @click="showEmojiPicker = !showEmojiPicker">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-smile"><circle cx="12" cy="12" r="10"></circle><path d="M8 14s1.5 2 4 2 4-2 4-2"></path><line x1="9" y1="9" x2="9.01" y2="9"></line><line x1="15" y1="9" x2="15.01" y2="9"></line></svg>
+                    </button>
+                    <!-- Emoji Picker Popover -->
+                    <div v-if="showEmojiPicker" class="position-absolute bottom-100 start-0 bg-dark border border-secondary rounded shadow p-2 d-flex flex-wrap gap-2" style="z-index: 1000; width: 180px;">
+                        <button v-for="emoji in commonEmojis" :key="emoji" class="btn btn-sm btn-link text-decoration-none p-1 fs-4" @click="addEmoji(emoji)">{{ emoji }}</button>
+                    </div>
+                 </div>
+
+                 <!-- Attachment Button -->
+                 <button class="btn btn-link text-secondary p-2" @click="triggerFileInput" title="Send Image">
+                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-paperclip"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
+                 </button>
+                 <input type="file" ref="imageInput" class="d-none" accept="image/*" @change="handleImageUpload">
+                 
+                 <input type="text" ref="msgInput" class="form-control bg-dark-input text-white border-0 rounded-3 py-2" placeholder="Type a message" v-model="newMessage" @keyup.enter="sendMessage">
+                 
+                 <button class="btn btn-link text-secondary p-2" @click="sendMessage" :disabled="!newMessage.trim()">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-send"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                 </button>
+             </div>
         </div>
     </div>
 </template>

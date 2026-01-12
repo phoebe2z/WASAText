@@ -30,6 +30,9 @@ export default {
             showForwardModal: false,
             messageToForward: null,
             forwardTargets: [], // selected conversation Ids
+            forwardUserTargets: [], // selected user IDs (for non-friends)
+            forwardSearchQuery: "",
+            allUsers: [],
             
             pollInterval: null
         }
@@ -37,6 +40,19 @@ export default {
     computed: {
         activeConversation() {
             return this.conversations.find(c => c.conversationId === this.activeConversationId);
+        },
+        filteredForwardConversations() {
+            if (!this.forwardSearchQuery) return this.conversations;
+            const q = this.forwardSearchQuery.toLowerCase();
+            return this.conversations.filter(c => (c.name || '').toLowerCase().includes(q));
+        },
+        filteredForwardUsers() {
+            const q = this.forwardSearchQuery.toLowerCase();
+            return this.allUsers.filter(u => 
+                (u.name || '').toLowerCase().includes(q) && 
+                u.id != this.userId &&
+                !this.conversations.find(c => !c.isGroup && c.name === u.name)
+            );
         }
     },
     methods: {
@@ -67,23 +83,40 @@ export default {
             this.showRightPanel = false; // Close info on switch? or keep open? Usually close.
             try {
                 let response = await this.$axios.get("/conversations/" + id);
-                this.messages = response.data.reverse(); 
+                this.messages = response.data; 
             } catch (e) {
                 alert(e.toString());
             }
         },
-        async sendMessage(content) {
+        async sendMessage(content, type = "text", replyToId = null) {
             try {
+                let actualContent = content;
+                let actualType = type;
+
+                if (content instanceof File) {
+                    actualContent = await this.fileToBase64(content);
+                    actualType = "photo";
+                }
+
                 await this.$axios.post("/messages", {
                     conversationId: this.activeConversationId,
-                    content: content,
-                    contentType: "text"
+                    content: actualContent,
+                    contentType: actualType,
+                    replyToId: replyToId
                 });
                 await this.openConversation(this.activeConversationId);
                 this.refreshConversations();
             } catch (e) {
-                alert(e.toString());
+                alert("Error sending message: " + (e.response ? (e.response.data || e.response.statusText) : e.message));
             }
+        },
+        fileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = error => reject(error);
+            });
         },
         async deleteMessage(id) {
             if (!confirm("Delete message?")) return;
@@ -101,7 +134,11 @@ export default {
                 localStorage.setItem("username", this.username);
                 alert("Name updated!");
             } catch (e) {
-                alert(e.toString());
+                if (e.response && e.response.status === 409) {
+                    alert("Error: Username already taken.");
+                } else {
+                    alert(e.toString());
+                }
             }
         },
         async updateProfilePhoto(payload) {
@@ -224,19 +261,57 @@ export default {
                console.error(e);
             }
         },
-        initForward(msg) {
+        async initForward(msg) {
             this.messageToForward = msg;
             this.forwardTargets = [];
+            this.forwardUserTargets = [];
+            this.forwardSearchQuery = "";
             this.showForwardModal = true;
+            try {
+                let res = await this.$axios.get("/users");
+                this.allUsers = res.data;
+            } catch (e) {
+                console.error(e);
+            }
         },
         async doForward() {
-            if (this.forwardTargets.length === 0) return;
+            if (this.forwardTargets.length === 0 && this.forwardUserTargets.length === 0) return;
             try {
-                await this.$axios.post("/messages/" + this.messageToForward.id + "/forward", {
-                    targetConversationIds: this.forwardTargets
-                });
+                // Forwarding to conversations
+                if (this.forwardTargets.length > 0) {
+                    await this.$axios.post("/messages/" + this.messageToForward.id + "/forward", {
+                        targetConversationIds: this.forwardTargets
+                    });
+                }
+                
+                // Forwarding to specific users (not yet in conversation)
+                for (const uId of this.forwardUserTargets) {
+                    const user = this.allUsers.find(u => u.id === uId);
+                    if (user) {
+                        let convId;
+                        try {
+                            let res = await this.$axios.post("/conversations", { recipientName: user.name });
+                            convId = res.data.conversationId;
+                        } catch (err) {
+                            if (err.response && err.response.status === 400 && err.response.data.conversationId) {
+                                convId = err.response.data.conversationId;
+                            } else {
+                                console.error("Error creating DM for forward", err);
+                                continue;
+                            }
+                        }
+                        
+                        if (convId) {
+                            await this.$axios.post("/messages/" + this.messageToForward.id + "/forward", {
+                                targetConversationIds: [convId]
+                            });
+                        }
+                    }
+                }
+
                 this.showForwardModal = false;
                 alert("Forwarded!");
+                this.refreshConversations();
             } catch (e) {
                 alert(e.toString());
             }
@@ -245,9 +320,7 @@ export default {
             if (!url) return null;
             if (url.startsWith("http")) return url;
             if (url.startsWith("/")) {
-                // If baseURL ends with / and url starts with /, strip one?
-                // axios baseURL usually doesn't end with slash if configured as "http://localhost:3000".
-                // But url is "/static/...".
+                // Use baseURL to derive absolute URL for images if needed
                 const base = this.$axios.defaults.baseURL || "";
                 return base + url;
             }
@@ -267,7 +340,7 @@ export default {
             this.refreshConversations();
             if (this.activeConversationId) {
                  this.$axios.get("/conversations/" + this.activeConversationId).then(res => {
-                     this.messages = res.data.reverse();
+                     this.messages = res.data;
                  }).catch(err => {
                      if (err.response && err.response.status === 404) {
                          // Selection is gone (e.g. left group or deleted)
@@ -357,17 +430,34 @@ export default {
         
         <!-- Forward Modal Overlay -->
         <div v-if="showForwardModal" class="position-absolute top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center bg-black bg-opacity-75" style="z-index: 2000;">
-             <div class="bg-dark rounded shadow p-3" style="width: 400px; max-height: 80vh; display: flex; flex-direction: column;">
-                 <h5 class="text-white mb-3">Forward Message to...</h5>
-                 <div class="flex-grow-1 overflow-auto custom-scrollbar mb-3 border border-secondary rounded">
-                     <div v-for="c in conversations" :key="c.conversationId" class="p-2 border-bottom border-secondary d-flex align-items-center gap-2">
-                         <input type="checkbox" :value="c.conversationId" v-model="forwardTargets" class="form-check-input bg-dark-input border-secondary">
-                         <span class="text-white">{{ c.name || (c.isGroup ? 'Group ' + c.conversationId : 'Chat ' + c.conversationId) }}</span>
+             <div class="bg-dark rounded shadow p-3" style="width: 450px; max-height: 85vh; display: flex; flex-direction: column;">
+                 <h5 class="text-white mb-3">Forward Message</h5>
+                 
+                 <div class="mb-3">
+                     <input type="text" class="form-control bg-dark-input text-white border-secondary" placeholder="Search chats or users..." v-model="forwardSearchQuery">
+                 </div>
+
+                 <div class="flex-grow-1 overflow-auto custom-scrollbar mb-3 border border-secondary rounded p-2">
+                     <div v-if="filteredForwardConversations.length > 0">
+                         <small class="text-success fw-bold d-block mb-2">CHATS</small>
+                         <div v-for="c in filteredForwardConversations" :key="'c'+c.conversationId" class="p-2 border-bottom border-secondary d-flex align-items-center gap-2 chat-item rounded">
+                             <input type="checkbox" :value="c.conversationId" v-model="forwardTargets" class="form-check-input bg-dark-input border-secondary">
+                             <span class="text-white">{{ c.name || (c.isGroup ? 'Group ' + c.conversationId : 'Chat ' + c.conversationId) }}</span>
+                         </div>
+                     </div>
+
+                     <div class="mt-3" v-if="filteredForwardUsers.length > 0">
+                         <small class="text-warning fw-bold d-block mb-2">ALL USERS (NON-FRIENDS)</small>
+                         <div v-for="u in filteredForwardUsers" :key="'u'+u.id" class="p-2 border-bottom border-secondary d-flex align-items-center gap-2 chat-item rounded">
+                             <input type="checkbox" :value="u.id" v-model="forwardUserTargets" class="form-check-input bg-dark-input border-secondary">
+                             <span class="text-white">{{ u.name }}</span>
+                         </div>
                      </div>
                  </div>
+
                  <div class="d-flex justify-content-end gap-2">
                      <button class="btn btn-secondary" @click="showForwardModal = false">Cancel</button>
-                     <button class="btn btn-success" @click="doForward" :disabled="forwardTargets.length === 0">Forward</button>
+                     <button class="btn btn-success" @click="doForward" :disabled="forwardTargets.length === 0 && forwardUserTargets.length === 0">Forward</button>
                  </div>
              </div>
         </div>
