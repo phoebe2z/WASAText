@@ -82,6 +82,11 @@ export default {
             if (!msg) return "Original message deleted";
             return msg.contentType === 'photo' ? '[Photo]' : msg.content;
         },
+        getReplySenderName(id) {
+            const msg = this.messages.find(m => m.id === id);
+            if (!msg) return "Original message deleted";
+            return msg.senderName || ('User ' + msg.senderId);
+        },
         openImage(url) {
             window.open(url, '_blank');
         }
@@ -128,7 +133,7 @@ export default {
                      <small v-if="conversation.isGroup && parseInt(msg.senderId) !== parseInt(userId)" class="text-warning fw-bold d-block mb-1" style="font-size: 0.75rem;">{{ msg.senderName || ('User ' + msg.senderId) }}</small>
                      
                      <div v-if="msg.replyToId" class="reply-preview p-2 mb-2 rounded border-start border-success border-4 bg-black bg-opacity-25" style="cursor: pointer;" @click="scrollToMessage(msg.replyToId)">
-                         <small class="text-success fw-bold d-block">Replying to...</small>
+                         <small class="text-success fw-bold d-block">{{ getReplySenderName(msg.replyToId) }}</small>
                          <div class="text-white-50 text-truncate" style="max-height: 40px;">{{ getReplyPreview(msg.replyToId) }}</div>
                      </div>
 
@@ -191,12 +196,14 @@ export default {
         <!-- Input Area -->
         <div class="p-0 bg-dark-header border-top border-secondary">
              <!-- Reply Bar -->
-             <div v-if="replyingTo" class="p-2 px-3 bg-dark-input d-flex align-items-center justify-content-between border-start border-success border-4 m-2 rounded">
-                 <div class="min-w-0">
-                     <small class="text-success fw-bold">Replying to {{ replyingTo.senderName }}</small>
-                     <div class="text-secondary text-truncate">{{ replyingTo.contentType === 'photo' ? '[Photo]' : replyingTo.content }}</div>
+             <div v-if="replyingTo" class="reply-preview-bar p-2 bg-dark border-top border-success border-4 d-flex align-items-center justify-content-between">
+                 <div class="d-flex flex-column overflow-hidden">
+                     <small class="text-success fw-bold">{{ getReplySenderName(replyingTo.id) }}</small>
+                     <div class="text-secondary text-truncate small">{{ replyingTo.contentType === 'photo' ? '[Photo]' : replyingTo.content }}</div>
                  </div>
-                 <button class="btn btn-link text-secondary p-0" @click="cancelReply">×</button>
+                 <button class="btn btn-link text-secondary p-0" @click="cancelReply">
+                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-x"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                 </button>
              </div>
 
              <div class="p-2 d-flex align-items-center gap-2">

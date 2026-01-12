@@ -326,6 +326,17 @@ export default {
             }
             return url;
         },
+        handleTargetClick(type, id) {
+            if (type === 'c') {
+                const idx = this.forwardTargets.indexOf(id);
+                if (idx > -1) this.forwardTargets.splice(idx, 1);
+                else this.forwardTargets.push(id);
+            } else {
+                const idx = this.forwardUserTargets.indexOf(id);
+                if (idx > -1) this.forwardUserTargets.splice(idx, 1);
+                else this.forwardUserTargets.push(id);
+            }
+        }
     },
     mounted() {
         if (!this.userId) {
@@ -430,34 +441,68 @@ export default {
         
         <!-- Forward Modal Overlay -->
         <div v-if="showForwardModal" class="position-absolute top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center bg-black bg-opacity-75" style="z-index: 2000;">
-             <div class="bg-dark rounded shadow p-3" style="width: 450px; max-height: 85vh; display: flex; flex-direction: column;">
-                 <h5 class="text-white mb-3">Forward Message</h5>
+             <div class="bg-dark rounded-3 shadow-lg p-0 overflow-hidden" style="width: 400px; max-height: 80vh; display: flex; flex-direction: column; background-color: #111b21 !important;">
+                 <!-- Header -->
+                 <div class="p-3 d-flex align-items-center gap-3 text-white border-bottom border-secondary border-opacity-25" style="background-color: #202c33;">
+                     <button class="btn btn-link text-white p-0" @click="showForwardModal = false">
+                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-x"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                     </button>
+                     <h6 class="mb-0 fw-semibold">Forward message to</h6>
+                 </div>
                  
-                 <div class="mb-3">
-                     <input type="text" class="form-control bg-dark-input text-white border-secondary" placeholder="Search chats or users..." v-model="forwardSearchQuery">
-                 </div>
-
-                 <div class="flex-grow-1 overflow-auto custom-scrollbar mb-3 border border-secondary rounded p-2">
-                     <div v-if="filteredForwardConversations.length > 0">
-                         <small class="text-success fw-bold d-block mb-2">CHATS</small>
-                         <div v-for="c in filteredForwardConversations" :key="'c'+c.conversationId" class="p-2 border-bottom border-secondary d-flex align-items-center gap-2 chat-item rounded">
-                             <input type="checkbox" :value="c.conversationId" v-model="forwardTargets" class="form-check-input bg-dark-input border-secondary">
-                             <span class="text-white">{{ c.name || (c.isGroup ? 'Group ' + c.conversationId : 'Chat ' + c.conversationId) }}</span>
-                         </div>
-                     </div>
-
-                     <div class="mt-3" v-if="filteredForwardUsers.length > 0">
-                         <small class="text-warning fw-bold d-block mb-2">ALL USERS (NON-FRIENDS)</small>
-                         <div v-for="u in filteredForwardUsers" :key="'u'+u.id" class="p-2 border-bottom border-secondary d-flex align-items-center gap-2 chat-item rounded">
-                             <input type="checkbox" :value="u.id" v-model="forwardUserTargets" class="form-check-input bg-dark-input border-secondary">
-                             <span class="text-white">{{ u.name }}</span>
-                         </div>
+                 <!-- Search -->
+                 <div class="p-3">
+                     <div class="input-group">
+                         <span class="input-group-text bg-dark-input border-0 text-secondary pe-0">
+                             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-search"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                         </span>
+                         <input type="text" class="form-control bg-dark-input text-white border-0 forward-search-input" placeholder="Search name or number" v-model="forwardSearchQuery" style="box-shadow: none;">
                      </div>
                  </div>
 
-                 <div class="d-flex justify-content-end gap-2">
-                     <button class="btn btn-secondary" @click="showForwardModal = false">Cancel</button>
-                     <button class="btn btn-success" @click="doForward" :disabled="forwardTargets.length === 0 && forwardUserTargets.length === 0">Forward</button>
+                 <!-- List -->
+                 <div class="flex-grow-1 overflow-auto custom-scrollbar px-1 pb-3">
+                     <div v-if="filteredForwardConversations.length > 0 || filteredForwardUsers.length > 0">
+                         <small class="text-secondary fw-semibold d-block px-3 py-2" style="font-size: 0.85rem;">Recent chats</small>
+                         
+                         <!-- Conversations -->
+                         <div v-for="c in filteredForwardConversations" :key="'c'+c.conversationId" class="px-3 py-2 d-flex align-items-center gap-3 chat-item rounded-0 cursor-pointer" @click="handleTargetClick('c', c.conversationId)">
+                             <input type="checkbox" :value="c.conversationId" v-model="forwardTargets" class="form-check-input bg-dark-input border-secondary m-0" @click.stop>
+                             <div class="position-relative">
+                                 <img v-if="c.photoUrl" :src="c.photoUrl" class="rounded-circle" style="width: 40px; height: 40px; object-fit: cover;">
+                                 <div v-else class="rounded-circle d-flex align-items-center justify-content-center bg-secondary text-white" style="width: 40px; height: 40px;">
+                                     <svg v-if="c.isGroup" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-users"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                                     <svg v-else xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-user"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                                 </div>
+                             </div>
+                             <div class="min-w-0 flex-grow-1 border-bottom border-secondary border-opacity-10 pb-2">
+                                 <div class="text-white text-truncate">{{ c.name || (c.isGroup ? 'Group ' + c.conversationId : 'Chat ' + c.conversationId) }}</div>
+                                 <small class="text-secondary d-block text-truncate">{{ c.isGroup ? 'Group' : 'Direct Message' }}</small>
+                             </div>
+                         </div>
+
+                         <!-- Users (Friends/Searchable) -->
+                         <div v-for="u in filteredForwardUsers" :key="'u'+u.id" class="px-3 py-2 d-flex align-items-center gap-3 chat-item rounded-0 cursor-pointer" @click="handleTargetClick('u', u.id)">
+                             <input type="checkbox" :value="u.id" v-model="forwardUserTargets" class="form-check-input bg-dark-input border-secondary m-0" @click.stop>
+                             <div class="position-relative">
+                                 <img v-if="u.photoUrl" :src="resolvePhotoUrl(u.photoUrl)" class="rounded-circle" style="width: 40px; height: 40px; object-fit: cover;">
+                                 <div v-else class="rounded-circle d-flex align-items-center justify-content-center bg-secondary text-white" style="width: 40px; height: 40px;">
+                                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-user"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                                 </div>
+                             </div>
+                             <div class="min-w-0 flex-grow-1 border-bottom border-secondary border-opacity-10 pb-2">
+                                 <div class="text-white text-truncate">{{ u.name }}</div>
+                                 <small class="text-secondary d-block text-truncate">User</small>
+                             </div>
+                         </div>
+                     </div>
+                 </div>
+
+                 <!-- Footer -->
+                 <div class="p-3 d-flex justify-content-end bg-dark-header border-top border-secondary border-opacity-25 shadow-lg">
+                     <button class="btn btn-success rounded-5 px-4 shadow-sm" @click="doForward" :disabled="forwardTargets.length === 0 && forwardUserTargets.length === 0" style="background-color: #00a884; border-color: #00a884;">
+                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-send"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                     </button>
                  </div>
              </div>
         </div>
@@ -465,5 +510,11 @@ export default {
 </template>
 
 <style>
-/* Global overrides/utilities if needed */
+.forward-search-input:focus {
+    border: 1px solid #00a884 !important;
+    background-color: #202c33 !important;
+}
+.chat-item:hover {
+    background-color: #202c33;
+}
 </style>
