@@ -20,7 +20,7 @@ tags:
     description: Group chat creation and management.
 
 servers:
-  - url: http://localhost:8080
+  - url: http://localhost:3000
     description: Local development server
     
 paths:
