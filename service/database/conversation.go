@@ -97,7 +97,10 @@ func (db *appdbimpl) GetConversations(userId int64) ([]Conversation, error) {
 				END
 			FROM messages m_inner WHERE m_inner.conversation_id = c.id ORDER BY m_inner.created_at DESC LIMIT 1) as latest_status,
 			(SELECT is_deleted FROM messages WHERE conversation_id = c.id ORDER BY created_at DESC LIMIT 1) as latest_deleted,
-			0 as unread_count
+			(SELECT COUNT(*) FROM messages m 
+			WHERE m.conversation_id = c.id 
+			AND m.sender_id != p_me.user_id
+			AND (p_me.last_read_at IS NULL OR m.created_at > p_me.last_read_at)) as unread_count
 		FROM conversations c
 		JOIN participants p_me ON c.id = p_me.conversation_id
 		WHERE p_me.user_id = ?

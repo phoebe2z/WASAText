@@ -296,9 +296,9 @@ paths:
                   description: The ID of the target conversation
                 content:
                   type: string
-                  description: The text content or URL for the photo
+                  description: The text content (max 200 chars) or base64-encoded photo data (max 5MB)
                   minLength: 1
-                  maxLength: 200
+                  maxLength: 5000000
                 contentType:
                   type: string
                   enum:

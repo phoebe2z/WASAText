@@ -27,7 +27,7 @@ func (rt *_router) sendMessage(w http.ResponseWriter, r *http.Request, ps httpro
 	}
 
 	// Validate
-	if len(req.Content) < 1 || (req.ContentType == "text" && len(req.Content) > 200) || (req.ContentType == "photo" && len(req.Content) > 1000000) {
+	if len(req.Content) < 1 || (req.ContentType == "text" && len(req.Content) > 200) || (req.ContentType == "photo" && len(req.Content) > 5000000) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}

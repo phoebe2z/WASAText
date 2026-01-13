@@ -88,6 +88,17 @@ func run() error {
 		logger.WithError(err).Error("error opening SQLite DB")
 		return fmt.Errorf("opening SQLite: %w", err)
 	}
+
+	// Configure connection pool to prevent locking issues
+	dbconn.SetMaxOpenConns(1) // SQLite works best with single connection
+	dbconn.SetMaxIdleConns(1)
+
+	// Enable WAL mode for better concurrency
+	_, err = dbconn.Exec("PRAGMA journal_mode=WAL")
+	if err != nil {
+		logger.WithError(err).Warn("failed to enable WAL mode")
+	}
+
 	defer func() {
 		logger.Debug("database stopping")
 		_ = dbconn.Close()
