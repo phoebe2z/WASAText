@@ -1,7 +1,7 @@
 <script>
 export default {
     props: ['conversation', 'username', 'userId'],
-    emits: ['set-group-name', 'set-group-photo', 'add-member', 'leave-group', 'close'],
+    emits: ['set-group-name', 'set-group-photo', 'add-member', 'leave-group', 'close', 'show-error'],
     data() {
         return {
             view: 'info', // 'info', 'add_member'
@@ -87,13 +87,11 @@ export default {
                 this.view = 'info';
                 this.fetchMembers();
             } catch (e) {
-                alert("Error adding members: " + e.toString());
+                this.$emit('show-error', "Error adding members: " + e.toString());
             }
         },
         leaveGroup() {
-            if (confirm("Are you sure you want to leave this group?")) {
-                this.$emit('leave-group', this.conversation.conversationId);
-            }
+            this.$emit('leave-group', this.conversation.conversationId);
         },
         resolvePhotoUrl(url) {
             if (!url) return null;

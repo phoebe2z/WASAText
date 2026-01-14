@@ -1,7 +1,7 @@
 <script>
 export default {
     props: ['conversations', 'activeId', 'currentUserId'],
-    emits: ['select-chat', 'create-group', 'create-dm'],
+    emits: ['select-chat', 'create-group', 'create-dm', 'show-error'],
     data() {
         return {
             searchQuery: "",
@@ -110,7 +110,7 @@ export default {
                 this.groupName = "";
                 this.$emit('chat-created', res.data.groupId);
             } catch (e) {
-                alert("Error creating group: " + e.toString());
+                this.$emit('show-error', "Error creating group: " + e.toString());
             }
         },
         resolvePhotoUrl(url) {

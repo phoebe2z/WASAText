@@ -4,10 +4,11 @@ import ChatList from '../components/ChatList.vue';
 import ProfilePanel from '../components/ProfilePanel.vue';
 import ChatWindow from '../components/ChatWindow.vue';
 import RightPanel from '../components/RightPanel.vue';
+import Toast from '../components/Toast.vue';
 
 export default {
     components: {
-        SidebarRail, ChatList, ProfilePanel, ChatWindow, RightPanel
+        SidebarRail, ChatList, ProfilePanel, ChatWindow, RightPanel, Toast
     },
     data: function() {
         return {
@@ -85,7 +86,7 @@ export default {
                 let response = await this.$axios.get("/conversations/" + id);
                 this.messages = response.data; 
             } catch (e) {
-                alert(e.toString());
+                this.$refs.toast.error(e.toString());
             }
         },
         async sendMessage(content, type = "text", replyToId = null) {
@@ -124,7 +125,7 @@ export default {
             } catch (e) {
                 // Remove the optimistic message on failure
                 this.messages = this.messages.filter(m => m.id !== tempId);
-                alert("Error sending message: " + (e.response ? (e.response.data || e.response.statusText) : e.message));
+                this.$refs.toast.error("Error sending message: " + (e.response ? (e.response.data || e.response.statusText) : e.message));
             }
         },
         fileToBase64(file) {
@@ -136,12 +137,12 @@ export default {
             });
         },
         async deleteMessage(id) {
-            if (!confirm("Delete message?")) return;
             try {
                 await this.$axios.delete("/messages/" + id);
                 this.openConversation(this.activeConversationId);
+                this.$refs.toast.success("Message deleted");
             } catch (e) {
-                alert(e.toString());
+                this.$refs.toast.error(e.toString());
             }
         },
         async updateProfileName(newName) {
@@ -149,12 +150,12 @@ export default {
                 await this.$axios.put("/user/name", { newName });
                 this.username = newName;
                 localStorage.setItem("username", this.username);
-                alert("Name updated!");
+                this.$refs.toast.success("Name updated!");
             } catch (e) {
                 if (e.response && e.response.status === 409) {
-                    alert("Error: Username already taken.");
+                    this.$refs.toast.error("Error: Username already taken.");
                 } else {
-                    alert(e.toString());
+                    this.$refs.toast.error(e.toString());
                 }
             }
         },
@@ -167,10 +168,10 @@ export default {
                     res = await this.$axios.put("/user/photo", formData, {
                         headers: { 'Content-Type': 'multipart/form-data' }
                     });
-                    alert("Photo updated via File Upload!");
+                    this.$refs.toast.success("Photo updated!");
                 } else {
                     res = await this.$axios.put("/user/photo", { photoUrl: payload });
-                    alert("Photo updated via URL!");
+                    this.$refs.toast.success("Photo updated!");
                 }
                 
                 if (res && res.data && res.data.photoUrl) {
@@ -178,31 +179,10 @@ export default {
                 }
              } catch(e) {
                  console.error(e);
-                 alert("Error updating photo: " + e.toString());
+                 this.$refs.toast.error("Error updating photo: " + e.toString());
              }
         },
-        async createGroup() {
-            const name = prompt("Enter Group Name:");
-            if (!name) return;
-            const membersStr = prompt("Enter Member IDs (comma separated):");
-            if (!membersStr) return;
-            
-            let members = membersStr.split(",").map(id => parseInt(id.trim())).filter(id => !isNaN(id));
-            if (members.length < 1) { 
-                 alert("Need members");
-                 return;
-            }
-             
-            try {
-                await this.$axios.post("/groups", {
-                    name: name,
-                    initialMembers: members
-                });
-                this.refreshConversations();
-            } catch (e) {
-                alert(e.toString());
-            }
-        },
+
         logout() {
             localStorage.removeItem("user_id");
             localStorage.removeItem("username");
@@ -220,7 +200,7 @@ export default {
                 this.refreshConversations(); // Update list
                 // Update active conversation object strictly? computed prop will pick up change from conversations list update
             } catch (e) {
-                alert(e.toString());
+                this.$refs.toast.error(e.toString());
             }
         },
         async setGroupPhoto(groupId, payload) {
@@ -232,22 +212,22 @@ export default {
                         headers: { 'Content-Type': 'multipart/form-data' }
                     });
                     this.refreshConversations();
-                    alert("Group photo updated!");
+                    this.$refs.toast.success("Group photo updated!");
                 } else {
                     await this.$axios.put("/groups/" + groupId + "/photo", { photoUrl: payload });
                     this.refreshConversations();
                 }
              } catch(e) {
                  console.error(e);
-                 alert("Error updating group photo: " + e.toString());
+                 this.$refs.toast.error("Error updating group photo: " + e.toString());
              }
         },
         async addMember(groupId, userIds) {
             try {
                 await this.$axios.post("/groups/" + groupId + "/members", { userIds });
-                alert("Members added!");
+                this.$refs.toast.success("Members added!");
             } catch (e) {
-                alert(e.toString());
+                this.$refs.toast.error(e.toString());
             }
         },
         async leaveGroup(groupId) {
@@ -256,7 +236,7 @@ export default {
                 this.activeConversationId = null;
                 this.refreshConversations();
             } catch (e) {
-                alert(e.toString());
+                this.$refs.toast.error(e.toString());
             }
         },
         
@@ -327,10 +307,10 @@ export default {
                 }
 
                 this.showForwardModal = false;
-                alert("Forwarded!");
+                this.$refs.toast.success("Message forwarded!");
                 this.refreshConversations();
             } catch (e) {
-                alert(e.toString());
+                this.$refs.toast.error(e.toString());
             }
         },
         resolvePhotoUrl(url) {
@@ -400,8 +380,8 @@ export default {
                 :activeId="activeConversationId" 
                 :currentUserId="userId"
                 @select-chat="openConversation"
-                @create-group="createGroup"
                 @chat-created="onChatCreated"
+                @show-error="(msg) => $refs.toast.error(msg)"
             />
             <ProfilePanel 
                 v-if="activeTab === 'profile'"
@@ -454,6 +434,7 @@ export default {
             @add-member="addMember"
             @leave-group="leaveGroup"
             @close="showRightPanel = false"
+            @show-error="(msg) => $refs.toast.error(msg)"
         />
         
         <!-- Forward Modal Overlay -->
@@ -524,6 +505,9 @@ export default {
              </div>
         </div>
     </div>
+    
+    <!-- Toast Notifications -->
+    <Toast ref="toast" />
 </template>
 
 <style>
