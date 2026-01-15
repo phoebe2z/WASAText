@@ -7,12 +7,14 @@ services:
       dockerfile: Dockerfile.backend
     container_name: wasatext-backend
     ports:
-      - "3000:3000"  # API port
-      - "4000:4000"  # Debug port
+      - "3000:3000" # API port
+      - "4000:4000" # Debug port
     environment:
       - CGO_ENABLED=1
+      - CFG_DB_FILENAME=/app/data/decaf.db
     volumes:
-      - ./data:/app/data  # Persist database
+      - ./data:/app/data # Persist database
+      - ./static:/app/static # Persist uploaded files
     restart: unless-stopped
     networks:
       - wasatext-network
@@ -23,7 +25,7 @@ services:
       dockerfile: Dockerfile.frontend
     container_name: wasatext-frontend
     ports:
-      - "8080:80"  # Frontend on port 8080
+      - "8080:80" # Frontend on port 8080
     depends_on:
       - backend
     restart: unless-stopped
