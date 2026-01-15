@@ -27,6 +27,7 @@ WORKDIR /app
 # Copy the binary from build stage
 COPY --from=build-stage /app/webapi .
 # Copy internal certificates or other resources if needed (not seen in inspection)
+COPY --from=build-stage /app/static ./static
 
 # Expose API port (3000) and Debug port (4000) based on default configuration
 EXPOSE 3000 4000
