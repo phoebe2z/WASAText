@@ -1,6 +1,6 @@
 module git.phoebe2z/WASAText
 
-go 1.23
+go 1.19
 
 require (
 	github.com/ardanlabs/conf v1.5.0
