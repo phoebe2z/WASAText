@@ -31,6 +31,15 @@ export default {
              }
         },
         react(msgId, emoji) {
+             const msg = this.messages.find(m => m.id === msgId);
+             if (msg && msg.reactions) {
+                 const existing = msg.reactions.find(r => parseInt(r.user_id) === parseInt(this.userId) && r.emoticon === emoji);
+                 if (existing) {
+                     this.$emit('unreact-message', msgId, this.userId);
+                     this.showReactionFor = null;
+                     return;
+                 }
+             }
              this.$emit('react-message', msgId, emoji);
              this.showReactionFor = null;
         },

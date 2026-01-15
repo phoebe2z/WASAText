@@ -1,7 +1,7 @@
 package database
 
 func (db *appdbimpl) AddReaction(messageId int64, userId int64, emoticon string) error {
-	_, err := db.c.Exec("INSERT INTO reactions (message_id, user_id, emoticon) VALUES (?, ?, ?)", messageId, userId, emoticon)
+	_, err := db.c.Exec("REPLACE INTO reactions (message_id, user_id, emoticon) VALUES (?, ?, ?)", messageId, userId, emoticon)
 	return err
 }
 
