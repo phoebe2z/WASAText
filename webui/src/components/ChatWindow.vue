@@ -178,31 +178,33 @@ export default {
                          </div>
 
                          <!-- Actions Dropdown/Hover -->
-                         <!-- Reaction Button -->
-                         <div class="position-relative">
-                             <button class="btn btn-link p-0 text-white-50 action-btn" @click.stop="toggleReaction(msg.id)">
-                                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-smile"><circle cx="12" cy="12" r="10"></circle><path d="M8 14s1.5 2 4 2 4-2 4-2"></path><line x1="9" y1="9" x2="9.01" y2="9"></line><line x1="15" y1="9" x2="15.01" y2="9"></line></svg>
-                             </button>
-                             <!-- Reaction Popover -->
-                             <div v-if="showReactionFor === msg.id" class="position-absolute bottom-100 start-50 translate-middle-x bg-dark border border-secondary rounded shadow p-1 d-flex gap-1" style="z-index: 1000; width: max-content;">
-                                 <button v-for="emoji in commonEmojis" :key="emoji" class="btn btn-sm btn-link text-decoration-none p-1 fs-5" @click="react(msg.id, emoji)">{{ emoji }}</button>
+                         <template v-if="!msg.isDeleted">
+                             <!-- Reaction Button -->
+                             <div class="position-relative">
+                                 <button class="btn btn-link p-0 text-white-50 action-btn" @click.stop="toggleReaction(msg.id)">
+                                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-smile"><circle cx="12" cy="12" r="10"></circle><path d="M8 14s1.5 2 4 2 4-2 4-2"></path><line x1="9" y1="9" x2="9.01" y2="9"></line><line x1="15" y1="9" x2="15.01" y2="9"></line></svg>
+                                 </button>
+                                 <!-- Reaction Popover -->
+                                 <div v-if="showReactionFor === msg.id" class="position-absolute bottom-100 start-50 translate-middle-x bg-dark border border-secondary rounded shadow p-1 d-flex gap-1" style="z-index: 1000; width: max-content;">
+                                     <button v-for="emoji in commonEmojis" :key="emoji" class="btn btn-sm btn-link text-decoration-none p-1 fs-5" @click="react(msg.id, emoji)">{{ emoji }}</button>
+                                 </div>
                              </div>
-                         </div>
-                         
-                         <!-- Reply -->
-                         <button class="btn btn-link p-0 text-white-50 action-btn" @click="setReply(msg)">
-                             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-corner-up-left"><polyline points="9 14 4 9 9 4"></polyline><path d="M20 20v-7a4 4 0 0 0-4-4H4"></path></svg>
-                         </button>
+                             
+                             <!-- Reply -->
+                             <button class="btn btn-link p-0 text-white-50 action-btn" @click="setReply(msg)">
+                                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-corner-up-left"><polyline points="9 14 4 9 9 4"></polyline><path d="M20 20v-7a4 4 0 0 0-4-4H4"></path></svg>
+                             </button>
 
-                         <!-- Forward -->
-                         <button class="btn btn-link p-0 text-white-50 action-btn" @click="startForward(msg)">
-                             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-share"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path><polyline points="16 6 12 2 8 6"></polyline><line x1="12" y1="2" x2="12" y2="15"></line></svg>
-                         </button>
+                             <!-- Forward -->
+                             <button class="btn btn-link p-0 text-white-50 action-btn" @click="startForward(msg)">
+                                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-share"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path><polyline points="16 6 12 2 8 6"></polyline><line x1="12" y1="2" x2="12" y2="15"></line></svg>
+                             </button>
 
-                         <!-- Delete -->
-                         <button v-if="parseInt(msg.senderId) === parseInt(userId)" class="btn btn-link p-0 text-white-50 action-btn" @click="$emit('delete-message', msg.id)">
-                             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-trash-2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
-                         </button>
+                             <!-- Delete -->
+                             <button v-if="parseInt(msg.senderId) === parseInt(userId)" class="btn btn-link p-0 text-white-50 action-btn" @click="$emit('delete-message', msg.id)">
+                                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-trash-2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                             </button>
+                         </template>
                      </div>
                 </div>
              </div>

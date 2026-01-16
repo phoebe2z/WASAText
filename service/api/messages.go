@@ -47,6 +47,15 @@ func (rt *_router) sendMessage(w http.ResponseWriter, r *http.Request, ps httpro
 		return
 	}
 
+	if req.ReplyToId != nil {
+		replyMsg, err := rt.db.GetMessage(*req.ReplyToId)
+		if err == nil && replyMsg.IsDeleted {
+			// Cannot reply to deleted message
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+	}
+
 	msg, err := rt.db.SendMessage(req.ConversationId, userId, req.Content, req.ContentType, req.ReplyToId)
 	if err != nil {
 		rt.baseLogger.WithError(err).Error("error sending message")
@@ -116,6 +125,10 @@ func (rt *_router) forwardMessage(w http.ResponseWriter, r *http.Request, ps htt
 	in, _ := rt.db.IsUserInConversation(msg.ConversationId, userId)
 	if !in {
 		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+	if msg.IsDeleted {
+		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
@@ -217,6 +230,11 @@ func (rt *_router) commentMessage(w http.ResponseWriter, r *http.Request, ps htt
 		return
 	}
 	// I will verify the import in next step.
+
+	if msg.IsDeleted {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
 
 	err = rt.db.AddReaction(messageId, userId, req.Emoticon)
 	if err != nil {
