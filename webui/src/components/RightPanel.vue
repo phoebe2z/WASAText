@@ -1,6 +1,6 @@
 <script>
 export default {
-    props: ['conversation', 'username', 'userId'],
+    props: ['conversation', 'conversations', 'username', 'userId'],
     emits: ['set-group-name', 'set-group-photo', 'add-member', 'leave-group', 'close', 'show-error'],
     data() {
         return {
@@ -28,7 +28,9 @@ export default {
             const query = this.memberSearch.toLowerCase();
             return this.allUsers.filter(u => 
                 u.name.toLowerCase().includes(query) && 
-                u.id.toString() !== this.userId?.toString()
+                u.id.toString() !== this.userId?.toString() &&
+                // Restrict to contacts: MUST have a 1-on-1 conversation with them
+                this.conversations.some(c => !c.isGroup && c.name === u.name)
             );
         }
     },

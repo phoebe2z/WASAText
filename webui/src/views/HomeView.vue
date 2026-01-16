@@ -427,6 +427,7 @@ export default {
          <RightPanel 
             v-if="showRightPanel && activeConversation"
             :conversation="activeConversation"
+            :conversations="conversations"
             :username="username"
             :userId="userId"
             @set-group-name="setGroupName"
