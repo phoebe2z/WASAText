@@ -30,7 +30,9 @@ export default {
             const query = this.groupSearch.toLowerCase();
             return this.allUsers.filter(u => 
                 u.name.toLowerCase().includes(query) && 
-                u.id.toString() !== this.currentUserId?.toString()
+                u.id.toString() !== this.currentUserId?.toString() &&
+                // Restrict to contacts: MUST have a 1-on-1 conversation with them
+                this.conversations.some(c => !c.isGroup && c.name === u.name)
             );
         }
     },
